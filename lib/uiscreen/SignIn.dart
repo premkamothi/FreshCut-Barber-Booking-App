@@ -1,6 +1,10 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:google_sign_in/google_sign_in.dart';
+import 'package:project_sem7/uiscreen/Login.dart';
+import 'package:project_sem7/uiscreen/Signup.dart';
+
+import 'Home.dart';
 
 class Signin extends StatefulWidget {
   const Signin({super.key});
@@ -11,45 +15,35 @@ class Signin extends StatefulWidget {
 
 class _SigninState extends State<Signin> {
 
-  User? _user;
-
-  @override
-  void initState() {
-    super.initState();
-    _user = FirebaseAuth.instance.currentUser;
-  }
-
   Future<void> _signInWithGoogle() async {
     try {
       final GoogleSignIn googleSignIn = GoogleSignIn();
+
+      await googleSignIn.signOut();
+
       final GoogleSignInAccount? googleUser = await googleSignIn.signIn();
       if (googleUser == null) return; // User canceled
 
-      final GoogleSignInAuthentication googleAuth =
-      await googleUser.authentication;
+      final GoogleSignInAuthentication googleAuth = await googleUser.authentication;
 
       final credential = GoogleAuthProvider.credential(
         accessToken: googleAuth.accessToken,
         idToken: googleAuth.idToken,
       );
 
-      final userCredential =
       await FirebaseAuth.instance.signInWithCredential(credential);
 
-      setState(() {
-        _user = userCredential.user;
-      });
+      // ✅ Navigate to Home screen after successful sign-in
+      if (mounted) {
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (context) => const Home()),
+        );
+      }
     } catch (e) {
-      print("Sign-in error: $e");
+      print("Google sign-in error: $e");
+      // You can show a SnackBar or AlertDialog here
     }
-  }
-
-  Future<void> _signOut() async {
-    await FirebaseAuth.instance.signOut();
-    await GoogleSignIn().signOut();
-    setState(() {
-      _user = null;
-    });
   }
 
   @override
@@ -65,23 +59,37 @@ class _SigninState extends State<Signin> {
                 width: 250,
                 child: Image.asset("assets/images/signin.png"),
               ),
+              SizedBox(height: 20),
+              Text("Let's Login",style: TextStyle(fontSize: 35,fontWeight: FontWeight.bold),),
               const SizedBox(height: 30),
-              if (_user == null)
-                ElevatedButton(
-                  onPressed: _signInWithGoogle,
-                  child: const Text("Continue with Google"),
-                )
-              else
-                Column(
-                  children: [
-                    Text("Signed in as: ${_user!.displayName}"),
-                    const SizedBox(height: 10),
-                    ElevatedButton(
-                      onPressed: _signOut,
-                      child: const Text("Sign Out"),
-                    ),
-                  ],
-                ),
+              SizedBox(height: 50,width: 220,
+              child: TextButton(onPressed: _signInWithGoogle, child: Row(
+                children: [
+                  Image.asset("assets/images/google_logo.png",height: 40,width: 40,),
+                  Text("Continue with Google",style: TextStyle(color: Colors.black,fontSize: 15),),
+                ],
+              )),),
+              SizedBox(height: 30),
+              Text("or",style: TextStyle(color: Colors.grey,fontSize: 15),),
+              SizedBox(height: 30),
+              SizedBox(height: 50,width: 300,
+              child: ElevatedButton(onPressed: () {
+                Navigator.push(context, MaterialPageRoute(builder: (context) => Login()));
+              },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.orange,
+                  ),
+                  child: Text("Sign in with password", style: TextStyle(color: Colors.white,fontWeight: FontWeight.bold,fontSize: 15),)),),
+              SizedBox(height: 20),
+              SizedBox(height: 50,width: 250,
+              child: TextButton(onPressed: () {
+                Navigator.push(context, MaterialPageRoute(builder: (context) => Signup()));
+              }, child: RichText(text: TextSpan(
+                children:[
+                  TextSpan(text: "Don't have an account?",style: TextStyle(color: Colors.grey,fontSize: 15)),
+                  TextSpan(text: " Signup",style: TextStyle(color: Colors.orange,fontSize: 15)),
+                ]
+              ))),)
             ],
           ),
         ),
