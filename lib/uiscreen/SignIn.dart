@@ -1,3 +1,4 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
@@ -5,6 +6,9 @@ import 'package:google_sign_in/google_sign_in.dart';
 import 'package:project_sem7/uiscreen/Login.dart';
 import 'package:project_sem7/uiscreen/Profile.dart';
 import 'package:project_sem7/uiscreen/Signup.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+
+import 'Home.dart';
 
 
 class Signin extends StatefulWidget {
@@ -19,32 +23,51 @@ class _SigninState extends State<Signin> {
   Future<void> _signInWithGoogle() async {
     try {
       final GoogleSignIn googleSignIn = GoogleSignIn();
-
-      await googleSignIn.signOut();
-
+      await googleSignIn.signOut(); // Ensures fresh login
       final GoogleSignInAccount? googleUser = await googleSignIn.signIn();
-      if (googleUser == null) return; // User canceled
+      if (googleUser == null) return;
 
       final GoogleSignInAuthentication googleAuth = await googleUser.authentication;
-
       final credential = GoogleAuthProvider.credential(
         accessToken: googleAuth.accessToken,
         idToken: googleAuth.idToken,
       );
 
-      await FirebaseAuth.instance.signInWithCredential(credential);
+      // Sign in to Firebase
+      UserCredential userCredential = await FirebaseAuth.instance.signInWithCredential(credential);
+      final String uid = userCredential.user?.uid ?? '';
 
-      if (mounted) {
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(builder: (context) => const Profile()),
-        );
+
+      // Check if user profile exists in Firestore
+      final DocumentSnapshot doc = await FirebaseFirestore.instance
+          .collection('ProfileDetail')
+          .doc(uid)
+          .get();
+
+      final prefs = await SharedPreferences.getInstance();
+
+      if (doc.exists) {
+        // Profile already created, set logged in
+        await prefs.setBool('isLoggedIn', true);
+        if (mounted) {
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(builder: (context) => const Home()),
+          );
+        }
+      } else {
+        // First-time login, go to Profile screen
+        if (mounted) {
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(builder: (context) => const Profile()),
+          );
+        }
       }
     } catch (e) {
-      print("Google sign-in error: $e");
-      // You can show a SnackBar or AlertDialog here
     }
   }
+
 
   @override
   Widget build(BuildContext context) {
