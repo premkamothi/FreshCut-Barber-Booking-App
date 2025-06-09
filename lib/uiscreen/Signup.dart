@@ -111,9 +111,12 @@ class _SignupState extends State<Signup> with RouteAware {
           child: Column(
             children: [
               SizedBox(height: 70.h),
-              Text(
-                "Create your Account",
-                style: TextStyle(fontSize: 45.sp, fontWeight: FontWeight.bold),
+              Padding(
+                padding: const EdgeInsets.only(left: 23),
+                child: Text(
+                  "Create your Account",
+                  style: TextStyle(fontSize: 45.sp, fontWeight: FontWeight.bold),
+                ),
               ),
               SizedBox(height: 40.h),
               Form(
@@ -255,7 +258,7 @@ class _SignupState extends State<Signup> with RouteAware {
                     ),
                     SizedBox(height: 30.h),
                     SizedBox(
-                      height: 40.h,
+                      height: 30.h,
                       width: 220.w,
                       child: TextButton(
                         onPressed: _signInWithGoogle,
@@ -266,7 +269,7 @@ class _SignupState extends State<Signup> with RouteAware {
                               height: 40.h,
                               width: 40.w,
                             ),
-                            SizedBox(width: 10.w),
+                            SizedBox(width: 4.w),
                             Text("Continue with Google",
                                 style: TextStyle(color: Colors.black, fontSize: 15.sp)),
                           ],

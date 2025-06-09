@@ -87,9 +87,12 @@ class _LoginState extends State<Login> {
           child: Column(
             children: [
               SizedBox(height: 70.h),
-              Text(
-                "Login to your Account",
-                style: TextStyle(fontSize: 45.sp, fontWeight: FontWeight.bold),
+              Padding(
+                padding: const EdgeInsets.only(left: 23),
+                child: Text(
+                  "Login to your Account",
+                  style: TextStyle(fontSize: 45.sp, fontWeight: FontWeight.bold, color: Colors.black),
+                ),
               ),
               SizedBox(height: 40.h),
               Form(
