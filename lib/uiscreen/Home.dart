@@ -1,6 +1,7 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
-import 'package:project_sem7/uiscreen/Signin.dart'; // Make sure this points to your actual Signin screen
+import 'package:project_sem7/uiscreen/StartingPage.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class Home extends StatefulWidget {
   const Home({super.key});
@@ -10,31 +11,21 @@ class Home extends StatefulWidget {
 }
 
 class _HomeState extends State<Home> {
-  Future<void> _signOut() async {
-    await FirebaseAuth.instance.signOut();
-    if (mounted) {
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(builder: (context) => const Signin()),
-      );
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text("Home"),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.logout),
-            tooltip: "Sign Out",
-            onPressed: _signOut,
-          ),
-        ],
-      ),
-      body: const Center(
-        child: Text("Welcome to the Home Screen!"),
+      body: Center(
+        child:ElevatedButton(
+          onPressed: () async {
+            SharedPreferences prefs = await SharedPreferences.getInstance();
+            await prefs.setBool('isLoggedIn', false);
+            Navigator.pushReplacement(
+              context,
+              MaterialPageRoute(builder: (context) => const Startingpage()),
+            );
+          },
+          child: const Text("Logout"),
+        ),
       ),
     );
   }

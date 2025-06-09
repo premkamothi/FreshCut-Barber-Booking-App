@@ -3,9 +3,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:project_sem7/uiscreen/Login.dart';
+import 'package:project_sem7/uiscreen/Profile.dart';
 import 'package:project_sem7/uiscreen/Signup.dart';
 
-import 'Home.dart';
 
 class Signin extends StatefulWidget {
   const Signin({super.key});
@@ -34,11 +34,10 @@ class _SigninState extends State<Signin> {
 
       await FirebaseAuth.instance.signInWithCredential(credential);
 
-      // ✅ Navigate to Home screen after successful sign-in
       if (mounted) {
         Navigator.pushReplacement(
           context,
-          MaterialPageRoute(builder: (context) => const Home()),
+          MaterialPageRoute(builder: (context) => const Profile()),
         );
       }
     } catch (e) {
