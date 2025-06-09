@@ -2,6 +2,10 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:project_sem7/uiscreen/ProfileUpdate.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+
+import 'StartingPage.dart';
 
 class Home extends StatefulWidget {
   const Home({super.key});
@@ -21,6 +25,14 @@ class _HomeState extends State<Home> {
     return doc.exists ? doc.data() : null;
   }
 
+  void _signout() async{
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    await prefs.setBool('isLoggedIn', false);
+    Navigator.pushReplacement(
+      context,
+      MaterialPageRoute(builder: (context) => const Startingpage()),
+    );
+  }
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -66,7 +78,7 @@ class _HomeState extends State<Home> {
                       SizedBox(height: 10.h),
                       Text(
                         "Hi, $name",
-                        style: TextStyle(color: Colors.white, fontSize: 18.sp),
+                        style: TextStyle(color: Colors.white, fontSize: 20.sp),
                       ),
                     ],
                   );
@@ -74,9 +86,25 @@ class _HomeState extends State<Home> {
               ),
             ),),
             ListTile(
-              leading: Icon(Icons.account_circle,size: 30,color: Colors.black,),
-              title: Text("Profile",style: TextStyle(fontSize: 20.sp,),),
+              leading: Icon(Icons.account_circle,size: 25,color: Colors.black,),
+              title: Text("Profile",style: TextStyle(fontSize: 18.sp,),),
+              onTap: () async {
+                final updated = await Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) => Profileupdate()),
+                );
+
+                if (updated == true) {
+                  setState(() {}); // Refresh drawer when profile is updated
+                }
+              },
             ),
+            ListTile(
+              leading: Icon(Icons.logout,size: 25,color: Colors.black,),
+              title: Text("Sign Out",style: TextStyle(fontSize: 18.sp,),),
+              onTap: _signout,
+            ),
+
           ],
         ),
       ),

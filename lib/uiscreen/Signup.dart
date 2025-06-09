@@ -258,7 +258,7 @@ class _SignupState extends State<Signup> with RouteAware {
                     ),
                     SizedBox(height: 30.h),
                     SizedBox(
-                      height: 30.h,
+                      height: 40.h,
                       width: 220.w,
                       child: TextButton(
                         onPressed: _signInWithGoogle,
