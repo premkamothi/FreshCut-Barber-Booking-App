@@ -72,7 +72,7 @@ class _SignupState extends State<Signup> with RouteAware {
         if (mounted) {
           Navigator.pushReplacement(
             context,
-            MaterialPageRoute(builder: (context) => Home()),
+            MaterialPageRoute(builder: (context) => HomeScreen()),
           );
         }
       } else {

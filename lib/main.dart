@@ -28,7 +28,7 @@ class MyApp extends StatelessWidget {
       builder: (context, child) {
         return MaterialApp(
           debugShowCheckedModeBanner: false,
-          home: isLoggedIn ? Home() : Startingpage(),
+          home: isLoggedIn ? HomeScreen() : Startingpage(),
         );
       },
     );

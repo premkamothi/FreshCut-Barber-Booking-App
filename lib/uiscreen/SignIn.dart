@@ -52,7 +52,7 @@ class _SigninState extends State<Signin> {
         if (mounted) {
           Navigator.pushReplacement(
             context,
-            MaterialPageRoute(builder: (context) => const Home()),
+            MaterialPageRoute(builder: (context) => const HomeScreen()),
           );
         }
       } else {

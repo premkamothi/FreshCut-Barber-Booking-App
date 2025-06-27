@@ -79,7 +79,7 @@ class _ProfileState extends State<Profile> {
 
     final prefs = await SharedPreferences.getInstance();
     await prefs.setBool('isLoggedIn', true);
-    Navigator.push(context, MaterialPageRoute(builder: (context) => const Home()));
+    Navigator.push(context, MaterialPageRoute(builder: (context) => const HomeScreen()));
   }
 
   @override

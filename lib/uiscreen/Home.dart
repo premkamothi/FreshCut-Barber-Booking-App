@@ -1,110 +1,260 @@
-import 'package:firebase_auth/firebase_auth.dart';
+import 'dart:async';
+import 'dart:convert';
+import 'dart:math';
+
 import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
+import 'package:location/location.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:flutter_screenutil/flutter_screenutil.dart';
-import 'package:project_sem7/uiscreen/ProfileUpdate.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 
-import 'StartingPage.dart';
-
-class Home extends StatefulWidget {
-  const Home({super.key});
+class HomeScreen extends StatefulWidget {
+  const HomeScreen({super.key});
 
   @override
-  State<Home> createState() => _HomeState();
+  State<HomeScreen> createState() => _HomeScreenState();
 }
 
-class _HomeState extends State<Home> {
-  final _scaffoldKey = GlobalKey<ScaffoldState>();
+class _HomeScreenState extends State<HomeScreen> {
+  final String apiKey = 'AIzaSyA5xVaMFV6c5rM4BCq1uVzUmXD_MxGwEZY';
+  final Location location = Location();
+  StreamSubscription<LocationData>? locationSubscription;
+  LocationData? previousLocation;
+  List<DocumentSnapshot> shops = [];
 
-  Future<Map<String, dynamic>?> getUserProfile() async {
-    final uid = FirebaseAuth.instance.currentUser?.uid;
-    if (uid == null) return null;
+  bool isLoading = false;
+  String message = '';
 
-    final doc = await FirebaseFirestore.instance.collection('ProfileDetail').doc(uid).get();
-    return doc.exists ? doc.data() : null;
+  @override
+  void initState() {
+    super.initState();
+    initLocationUpdates();
+    loadShopsFromFirestore(); // Load cached data
   }
 
-  void _signout() async{
-    SharedPreferences prefs = await SharedPreferences.getInstance();
-    await prefs.setBool('isLoggedIn', false);
-    Navigator.pushReplacement(
-      context,
-      MaterialPageRoute(builder: (context) => const Startingpage()),
+  @override
+  void dispose() {
+    locationSubscription?.cancel();
+    super.dispose();
+  }
+
+  void initLocationUpdates() async {
+    final serviceEnabled = await location.serviceEnabled() ||
+        await location.requestService();
+    final permissionGranted = await location.hasPermission() != PermissionStatus.denied ||
+        await location.requestPermission() == PermissionStatus.granted;
+
+    if (!serviceEnabled || !permissionGranted) {
+      setState(() => message = 'Location service or permission denied.');
+      return;
+    }
+
+    previousLocation = await location.getLocation();
+
+    locationSubscription = location.onLocationChanged.listen((currentLocation) {
+      if (previousLocation == null ||
+          calculateDistance(previousLocation!, currentLocation) >= 300) {
+        previousLocation = currentLocation;
+        fetchAndStoreFromCoords(currentLocation.latitude!, currentLocation.longitude!);
+      }
+    });
+  }
+
+  double calculateDistance(LocationData a, LocationData b) {
+    const R = 6371000; // Radius of Earth in meters
+    final lat1 = a.latitude! * pi / 180;
+    final lon1 = a.longitude! * pi / 180;
+    final lat2 = b.latitude! * pi / 180;
+    final lon2 = b.longitude! * pi / 180;
+
+    final dLat = lat2 - lat1;
+    final dLon = lon2 - lon1;
+
+    final x = sin(dLat / 2) * sin(dLat / 2) +
+        cos(lat1) * cos(lat2) *
+            sin(dLon / 2) * sin(dLon / 2);
+
+    final c = 2 * atan2(sqrt(x), sqrt(1 - x));
+    return R * c;
+  }
+
+  Future<List<Map<String, dynamic>>> fetchNearbyShops(double lat, double lng) async {
+    final url = Uri.parse(
+      'https://maps.googleapis.com/maps/api/place/nearbysearch/json'
+          '?location=$lat,$lng'
+          '&radius=500'
+          '&type=hair_care'
+          '&keyword=barber'
+          '&key=$apiKey',
+    );
+
+    final response = await http.get(url);
+    if (response.statusCode == 200) {
+      final data = json.decode(response.body);
+      return List<Map<String, dynamic>>.from(data['results']);
+    } else {
+      throw Exception('Failed to fetch data from Google Places API');
+    }
+  }
+
+  Future<Map<String, dynamic>?> fetchPlaceDetails(String placeId) async {
+    final url = Uri.parse(
+      'https://maps.googleapis.com/maps/api/place/details/json'
+          '?place_id=$placeId'
+          '&fields=name,rating,formatted_phone_number,photos,formatted_address,geometry,address_components'
+          '&key=$apiKey',
+    );
+
+    final response = await http.get(url);
+    if (response.statusCode == 200) {
+      return json.decode(response.body)['result'];
+    }
+    return null;
+  }
+
+  Future<void> saveShopsToFirestore(List<Map<String, dynamic>> shops) async {
+    final collection = FirebaseFirestore.instance.collection('BarberShops');
+
+    for (var shop in shops) {
+      final placeId = shop['place_id'];
+      final details = await fetchPlaceDetails(placeId);
+      if (details == null) continue;
+
+      List<String> photoUrls = [];
+      if (details['photos'] != null) {
+        for (var photo in details['photos']) {
+          final ref = photo['photo_reference'];
+          photoUrls.add(
+              'https://maps.googleapis.com/maps/api/place/photo?maxwidth=400&photoreference=$ref&key=$apiKey');
+        }
+      }
+
+      String pinCode = '';
+      if (details['address_components'] != null) {
+        for (var comp in details['address_components']) {
+          if (comp['types'].contains('postal_code')) {
+            pinCode = comp['long_name'];
+            break;
+          }
+        }
+      }
+
+      await collection.doc(placeId).set({
+        'name': details['name'],
+        'address': details['formatted_address'],
+        'location': GeoPoint(
+          details['geometry']['location']['lat'],
+          details['geometry']['location']['lng'],
+        ),
+        'rating': details['rating'] ?? 0.0,
+        'phone': details['formatted_phone_number'] ?? '',
+        'photos': photoUrls,
+        'pincode': pinCode,
+        'userRatingsTotal': shop['user_ratings_total'] ?? 0,
+      }, SetOptions(merge: true));
+    }
+  }
+
+  Future<void> fetchAndStoreFromCoords(double lat, double lng) async {
+    setState(() {
+      isLoading = true;
+      message = 'Fetching nearby shops...';
+    });
+
+    try {
+      final shops = await fetchNearbyShops(lat, lng);
+      if (shops.isEmpty) {
+        setState(() => message = 'No barber shops found nearby.');
+        return;
+      }
+
+      await saveShopsToFirestore(shops);
+      await loadShopsFromFirestore();
+      setState(() => message = 'Nearby barber shops updated.');
+    } catch (e) {
+      setState(() => message = 'Error: $e');
+    } finally {
+      setState(() => isLoading = false);
+    }
+  }
+
+  Future<void> loadShopsFromFirestore() async {
+    final query = await FirebaseFirestore.instance
+        .collection('BarberShops')
+        .orderBy('rating', descending: true)
+        .get();
+
+    setState(() {
+      shops = query.docs;
+    });
+  }
+
+  Widget buildShopCard(DocumentSnapshot doc) {
+    final data = doc.data() as Map<String, dynamic>;
+    final List<dynamic> photos = data['photos'] ?? [];
+
+    return Card(
+      margin: const EdgeInsets.symmetric(vertical: 10, horizontal: 16),
+      elevation: 3,
+      child: Padding(
+        padding: const EdgeInsets.all(12),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            if (photos.isNotEmpty)
+              SizedBox(
+                height: 200,
+                child: PageView.builder(
+                  itemCount: photos.length,
+                  itemBuilder: (context, index) => Image.network(
+                    photos[index],
+                    fit: BoxFit.cover,
+                    width: double.infinity,
+                    loadingBuilder: (_, child, progress) =>
+                    progress == null ? child : const Center(child: CircularProgressIndicator()),
+                  ),
+                ),
+              ),
+            const SizedBox(height: 10),
+            Text('Name: ${data['name']}', style: const TextStyle(fontWeight: FontWeight.bold)),
+            Text('Address: ${data['address']}'),
+            Text('Phone: ${data['phone'] ?? 'N/A'}'),
+            Text('Rating: ${data['rating']} ⭐ (${data['userRatingsTotal']} reviews)'),
+            Text('Pincode: ${data['pincode'] ?? 'N/A'}'),
+          ],
+        ),
+      ),
     );
   }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      key: _scaffoldKey,
-      backgroundColor: Colors.white,
-      appBar: AppBar(
-        actions: [
-          IconButton(
-            onPressed: () => _scaffoldKey.currentState?.openEndDrawer(),
-            icon: Icon(Icons.account_circle, size: 30),
-          )
-        ],
-      ),
-      endDrawer: Drawer(
+      appBar: AppBar(title: const Text('Nearby Barber Finder')),
+      body: isLoading
+          ? Center(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const CircularProgressIndicator(),
+            const SizedBox(height: 20),
+            Text(message),
+          ],
+        ),
+      )
+          : RefreshIndicator(
+        onRefresh: () async {
+          if (previousLocation != null) {
+            await fetchAndStoreFromCoords(
+                previousLocation!.latitude!, previousLocation!.longitude!);
+          }
+        },
         child: ListView(
           children: [
-            SizedBox(height: 150.h,width: 150.w,
-            child: DrawerHeader(
-              decoration: BoxDecoration(color: Colors.orange),
-              child: FutureBuilder<Map<String, dynamic>?>(
-                future: getUserProfile(),
-                builder: (context, snapshot) {
-                  if (snapshot.connectionState == ConnectionState.waiting) {
-                    return Text("Loading...", style: TextStyle(color: Colors.white));
-                  } else if (snapshot.hasError) {
-                    return Text("Error loading profile", style: TextStyle(color: Colors.white));
-                  } else if (!snapshot.hasData || snapshot.data == null) {
-                    return Text("No profile found", style: TextStyle(color: Colors.white));
-                  }
-
-                  final userData = snapshot.data!;
-                  final name = userData['name'] ?? 'Guest';
-                  final avatarPath = userData['avatar'] ?? 'assets/images/default_avatar.png';
-
-                  return Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      CircleAvatar(
-                        backgroundColor: const Color(0xFF6EC6FF),
-                        radius: 40.r,
-                        backgroundImage: AssetImage(avatarPath),
-                      ),
-                      SizedBox(height: 10.h),
-                      Text(
-                        "Hi, $name",
-                        style: TextStyle(color: Colors.white, fontSize: 20.sp),
-                      ),
-                    ],
-                  );
-                },
-              ),
-            ),),
-            ListTile(
-              leading: Icon(Icons.account_circle,size: 25,color: Colors.black,),
-              title: Text("Profile",style: TextStyle(fontSize: 18.sp,),),
-              onTap: () async {
-                final updated = await Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (context) => Profileupdate()),
-                );
-
-                if (updated == true) {
-                  setState(() {}); // Refresh drawer when profile is updated
-                }
-              },
-            ),
-            ListTile(
-              leading: Icon(Icons.logout,size: 25,color: Colors.black,),
-              title: Text("Sign Out",style: TextStyle(fontSize: 18.sp,),),
-              onTap: _signout,
-            ),
-
+            const SizedBox(height: 10),
+            if (message.isNotEmpty)
+              Center(child: Text(message, style: const TextStyle(color: Colors.grey))),
+            const SizedBox(height: 10),
+            ...shops.map(buildShopCard).toList(),
           ],
         ),
       ),

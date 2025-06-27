@@ -53,7 +53,7 @@ class _LoginState extends State<Login> {
         if (mounted) {
           Navigator.pushReplacement(
             context,
-            MaterialPageRoute(builder: (context) => const Home()),
+            MaterialPageRoute(builder: (context) => const HomeScreen()),
           );
         }
       } else {
@@ -211,7 +211,7 @@ class _LoginState extends State<Login> {
                               if (mounted) {
                                 Navigator.pushReplacement(
                                   context,
-                                  MaterialPageRoute(builder: (context) => const Home()),
+                                  MaterialPageRoute(builder: (context) => const HomeScreen()),
                                 );
                               }
                             } on FirebaseAuthException catch (e) {
