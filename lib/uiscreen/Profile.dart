@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
-import 'package:project_sem7/uiscreen/Home.dart';
 import 'package:project_sem7/uiscreen/SignIn.dart';
+import 'package:project_sem7/uiscreen/main_home_page.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_core/firebase_core.dart';
@@ -78,8 +78,9 @@ class _ProfileState extends State<Profile> {
     await FirebaseFirestore.instance.collection('ProfileDetail').doc(uid).set(data);
 
     final prefs = await SharedPreferences.getInstance();
-    await prefs.setBool('isLoggedIn', true);
-    Navigator.push(context, MaterialPageRoute(builder: (context) => const HomeScreen()));
+    await prefs.setBool('is_logged_in', true);
+    await prefs.setString('user_type', 'customer');
+    Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => const MainHomePage()));
   }
 
   @override

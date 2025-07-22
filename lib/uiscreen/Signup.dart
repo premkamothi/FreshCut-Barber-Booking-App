@@ -4,9 +4,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:project_sem7/uiscreen/Profile.dart';
+import 'package:project_sem7/uiscreen/main_home_page.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-import 'Home.dart';
 
 class Signup extends StatefulWidget {
   const Signup({super.key});
@@ -68,11 +68,12 @@ class _SignupState extends State<Signup> with RouteAware {
 
       if (doc.exists) {
         // Profile already created, set logged in
-        await prefs.setBool('isLoggedIn', true);
+        await prefs.setBool('is_logged_in', true);
+        await prefs.setString('user_type', 'customer');
         if (mounted) {
           Navigator.pushReplacement(
             context,
-            MaterialPageRoute(builder: (context) => HomeScreen()),
+            MaterialPageRoute(builder: (context) => MainHomePage()),
           );
         }
       } else {

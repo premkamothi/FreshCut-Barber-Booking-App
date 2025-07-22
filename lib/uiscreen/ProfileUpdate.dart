@@ -4,6 +4,8 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
+import 'StartingPage.dart';
+
 class Profileupdate extends StatefulWidget {
   const Profileupdate({super.key});
 
@@ -206,7 +208,20 @@ class _ProfileupdateState extends State<Profileupdate> {
                     ),
                   ),
                 ),
-                SizedBox(height: 40.h),
+                SizedBox(height: 20.h),
+                SizedBox(height: 40.h, width: 320.w,
+                child: ElevatedButton(onPressed: () async {
+                  final prefs = await SharedPreferences.getInstance();
+                  await prefs.setBool('is_logged_in', false);
+                  await prefs.setString('user_type', 'customer');
+                  Navigator.push(context, MaterialPageRoute(builder: (context) => Startingpage()));
+                },style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.orange,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(15.r),
+                  ),
+                ),
+                    child: Text("Sign Out", style: TextStyle(color: Colors.white, fontSize: 15.sp, fontWeight: FontWeight.bold),)),)
               ],
             ),
           ),

@@ -1,36 +1,57 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
-import 'package:project_sem7/uiscreen/Home.dart';
+import 'package:project_sem7/uiscreen/DashboardScreen.dart';
 import 'package:project_sem7/uiscreen/StartingPage.dart';
+import 'package:project_sem7/uiscreen/main_home_page.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:provider/provider.dart';
+import 'package:project_sem7/providers/liked_shops_provider.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp();
 
   SharedPreferences prefs = await SharedPreferences.getInstance();
-  bool isLoggedIn = prefs.getBool('isLoggedIn') ?? false;
+  bool isLoggedIn = prefs.getBool('is_logged_in') ?? false;
+  String? userType = prefs.getString('user_type');
 
-  runApp(MyApp(isLoggedIn: isLoggedIn));
+  Widget initialScreen;
+
+  if (!isLoggedIn) {
+    initialScreen = Startingpage(); // choose owner or customer
+  } else if (userType == 'owner') {
+    initialScreen = Dashboardscreen();
+  } else if (userType == 'customer') {
+    initialScreen = MainHomePage();
+  } else {
+    initialScreen = Startingpage(); // fallback
+  }
+
+  runApp(MyApp(initialScreen: initialScreen));
 }
 
 class MyApp extends StatelessWidget {
-  final bool isLoggedIn;
-  const MyApp({required this.isLoggedIn});
+  final Widget initialScreen;
+
+  const MyApp({super.key, required this.initialScreen});
 
   @override
   Widget build(BuildContext context) {
     return ScreenUtilInit(
-      designSize: Size(360, 690),
-      minTextAdapt: true,
-      splitScreenMode: true,
-      builder: (context, child) {
-        return MaterialApp(
-          debugShowCheckedModeBanner: false,
-          home: isLoggedIn ? HomeScreen() : Startingpage(),
+        designSize: Size(360, 690),
+        minTextAdapt: true,
+        splitScreenMode: true,
+        builder: (context, child) {
+          return ChangeNotifierProvider(
+            create: (_) => LikedShopsProvider(),
+            child: MaterialApp(
+              debugShowCheckedModeBanner: false,
+              home: initialScreen,
+            ),
+          );
+         },
         );
-      },
-    );
   }
+
 }

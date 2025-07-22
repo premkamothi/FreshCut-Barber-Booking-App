@@ -6,13 +6,13 @@ import 'package:google_sign_in/google_sign_in.dart';
 import 'package:project_sem7/uiscreen/Login.dart';
 import 'package:project_sem7/uiscreen/Profile.dart';
 import 'package:project_sem7/uiscreen/Signup.dart';
+import 'package:project_sem7/uiscreen/main_home_page.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-import 'Home.dart';
 
 
 class Signin extends StatefulWidget {
-  const Signin({super.key});
+  const Signin({super.key,});
 
   @override
   State<Signin> createState() => _SigninState();
@@ -48,11 +48,12 @@ class _SigninState extends State<Signin> {
 
       if (doc.exists) {
         // Profile already created, set logged in
-        await prefs.setBool('isLoggedIn', true);
+        await prefs.setBool('is_logged_in', true);
+        await prefs.setString('user_type', 'customer');
         if (mounted) {
           Navigator.pushReplacement(
             context,
-            MaterialPageRoute(builder: (context) => const HomeScreen()),
+            MaterialPageRoute(builder: (context) => const MainHomePage()),
           );
         }
       } else {
@@ -68,7 +69,6 @@ class _SigninState extends State<Signin> {
     }
   }
 
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -77,7 +77,7 @@ class _SigninState extends State<Signin> {
         child: Container(
           child: Column(
             children: [
-              SizedBox(height: 130.h),
+              SizedBox(height: 80.h),
               Container(
                 height: 230.h,
                 width: 230.w,
@@ -107,8 +107,8 @@ class _SigninState extends State<Signin> {
                     )
                   ),
                   child: Text("Sign in with password", style: TextStyle(color: Colors.white,fontWeight: FontWeight.bold,fontSize: 15.sp),)),),
-              SizedBox(height: 10.h),
-              SizedBox(height: 50.h,width: 250.w,
+              SizedBox(height: 20.h),
+              SizedBox(height: 30.h,width: 250.w,
               child: TextButton(onPressed: () {
                 Navigator.push(context, MaterialPageRoute(builder: (context) => Signup()));
               }, child: RichText(text: TextSpan(
@@ -116,7 +116,7 @@ class _SigninState extends State<Signin> {
                   TextSpan(text: "Don't have an account?",style: TextStyle(color: Colors.grey,fontSize: 15.sp)),
                   TextSpan(text: " Signup",style: TextStyle(color: Colors.orange,fontSize: 15.sp)),
                 ]
-              ))),)
+              ))),),
             ],
           ),
         ),

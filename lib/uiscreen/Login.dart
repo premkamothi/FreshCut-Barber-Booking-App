@@ -4,9 +4,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:project_sem7/uiscreen/ForgetPassword.dart';
-import 'package:project_sem7/uiscreen/Home.dart';
 import 'package:project_sem7/uiscreen/Profile.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+
+import 'main_home_page.dart';
 
 class Login extends StatefulWidget {
   const Login({super.key});
@@ -49,11 +50,12 @@ class _LoginState extends State<Login> {
 
       if (doc.exists) {
         // Profile already created, set logged in
-        await prefs.setBool('isLoggedIn', true);
+        await prefs.setBool('is_logged_in', true);
+        await prefs.setString('user_type', 'customer');
         if (mounted) {
           Navigator.pushReplacement(
             context,
-            MaterialPageRoute(builder: (context) => const HomeScreen()),
+            MaterialPageRoute(builder: (context) => MainHomePage()),
           );
         }
       } else {
@@ -206,12 +208,13 @@ class _LoginState extends State<Login> {
 
                               // ✅ Set shared preference flag
                               final prefs = await SharedPreferences.getInstance();
-                              await prefs.setBool('isLoggedIn', true);
+                              await prefs.setBool('is_logged_in', true);
+                              await prefs.setString('user_type', 'customer');
 
                               if (mounted) {
                                 Navigator.pushReplacement(
                                   context,
-                                  MaterialPageRoute(builder: (context) => const HomeScreen()),
+                                  MaterialPageRoute(builder: (context) => const MainHomePage()),
                                 );
                               }
                             } on FirebaseAuthException catch (e) {

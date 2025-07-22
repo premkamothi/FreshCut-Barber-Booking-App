@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
-import 'SignIn.dart';
 import 'dart:async';
+
+import 'package:project_sem7/uiscreen/RoleSelectionPage.dart';
 
 
 class Startingpage extends StatefulWidget {
@@ -58,7 +59,7 @@ class _StartingpageState extends State<Startingpage> {
           duration: const Duration(milliseconds: 300), curve: Curves.easeIn);
     } else {
       _timer?.cancel(); // Stop timer if user manually clicks Get Started
-      Navigator.push(context, MaterialPageRoute(builder: (_) => Signin()));
+      Navigator.push(context, MaterialPageRoute(builder: (_) => RoleSelectionPage()));
     }
   }
 
