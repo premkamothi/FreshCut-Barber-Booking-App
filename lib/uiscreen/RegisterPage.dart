@@ -19,6 +19,7 @@ class _RegisterpageState extends State<Registerpage> {
   final String apiKey = "AIzaSyA5xVaMFV6c5rM4BCq1uVzUmXD_MxGwEZY"; // Replace with your Google Places API Key
   List<dynamic> barberShops = [];
   bool isLoading = false;
+  String? userId;
 
   Future<void> searchGlobalBarbers(String query) async {
     if (query.trim().isEmpty) return;
@@ -47,6 +48,10 @@ class _RegisterpageState extends State<Registerpage> {
   void initState() {
     super.initState();
     searchGlobalBarbers("barber near me");
+    final user = FirebaseAuth.instance.currentUser;
+    setState(() {
+      userId = user?.uid;
+    });
   }
 
   @override
@@ -134,6 +139,7 @@ class _RegisterpageState extends State<Registerpage> {
                         .collection('BarberShops')
                         .doc(uid)
                         .set({
+                      'id': userId,
                       'name': name,
                       'address': address,
                       'email': ownerEmail,

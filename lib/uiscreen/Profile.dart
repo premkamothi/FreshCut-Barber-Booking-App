@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
-import 'package:project_sem7/uiscreen/SignIn.dart';
+import 'package:project_sem7/uiscreen/Login.dart';
 import 'package:project_sem7/uiscreen/main_home_page.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -97,7 +97,7 @@ class _ProfileState extends State<Profile> {
             onPressed: () {
               Navigator.pushReplacement(
                 context,
-                MaterialPageRoute(builder: (context) => const Signin()),
+                MaterialPageRoute(builder: (context) => const Login()),
               );
             },
             icon: const Icon(Icons.arrow_back, color: Colors.black),

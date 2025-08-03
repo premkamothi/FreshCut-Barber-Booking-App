@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:project_sem7/uiscreen/SignIn.dart';
-import 'package:project_sem7/uiscreen/Signinowner.dart';
+import 'package:project_sem7/uiscreen/Loginowner.dart';
+import 'Login.dart';
 import 'StartingPage.dart';
 
 
@@ -63,7 +63,7 @@ class _RoleSelectionPageState extends State<RoleSelectionPage>
               onTap: () {
                 Navigator.push(
                   context,
-                  MaterialPageRoute(builder: (context) => const Signin()),// replace Notifications() with signup or login page
+                  MaterialPageRoute(builder: (context) => const Login()),// replace Notifications() with signup or login page
                 );
               },
               child: Stack(
@@ -117,7 +117,7 @@ class _RoleSelectionPageState extends State<RoleSelectionPage>
               onTap: () {
                 Navigator.push(
                   context,
-                  MaterialPageRoute(builder: (context) => const Signinowner()),// replace Notifications() with signup or login page
+                  MaterialPageRoute(builder: (context) => const Loginowner()),// replace Notifications() with signup or login page
                 );
               },
               child: Stack(

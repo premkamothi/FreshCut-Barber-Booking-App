@@ -7,6 +7,7 @@ import 'package:project_sem7/uiscreen/ForgetPassword.dart';
 import 'package:project_sem7/uiscreen/Profile.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import 'Signup.dart';
 import 'main_home_page.dart';
 
 class Login extends StatefulWidget {
@@ -88,9 +89,9 @@ class _LoginState extends State<Login> {
         body: SingleChildScrollView(
           child: Column(
             children: [
-              SizedBox(height: 70.h),
+              SizedBox(height: 50.h),
               Padding(
-                padding: const EdgeInsets.only(left: 23),
+                padding: EdgeInsets.only(left: 23.w),
                 child: Text(
                   "Login to your Account",
                   style: TextStyle(fontSize: 45.sp, fontWeight: FontWeight.bold, color: Colors.black),
@@ -242,30 +243,39 @@ class _LoginState extends State<Login> {
                         ),
                       ),
                     ),
-                    SizedBox(height: 30.h),
-                    Center(
-                      child: Text("or", style: TextStyle(color: Colors.grey, fontSize: 15.sp)),
+                    SizedBox(height: 20.h),
+                    GestureDetector(
+                      onTap: () {
+                        Navigator.push(context, MaterialPageRoute(builder: (context) => Signup()));
+                      },
+                      child: RichText(text: TextSpan(
+                          children: [
+                            TextSpan(text: "Don't have an account?", style: TextStyle(fontSize: 14.sp,color: Colors.black)),
+                            TextSpan(text: " Sign Up" ,style: TextStyle(color: Colors.orange,fontSize: 14.sp)),
+                          ]
+                      )),
                     ),
-                    SizedBox(height: 30.h),
+                    SizedBox(height: 60.h),
                     SizedBox(
                       height: 40.h,
                       width: 220.w,
-                      child: TextButton(
-                        onPressed: _signInWithGoogle,
-                        child: Row(
-                          children: [
-                            Image.asset(
-                              "assets/images/google_logo.png",
-                              height: 40.h,
-                              width: 40.w,
-                            ),
-                            Text(
-                              "Continue with Google",
-                              style: TextStyle(color: Colors.black, fontSize: 15.sp),
-                            ),
-                          ],
-                        ),
-                      ),
+                      child: ElevatedButton(onPressed: _signInWithGoogle,
+                          child: Row(
+                            children: [
+                              SizedBox(width: 5.w),
+                              Image.asset("assets/images/google_logo.png",
+                              height: 25.h,
+                              width: 25.w),
+                              Text("Continue With Google", style: TextStyle(color: Colors.black,fontSize: 14.sp),)
+                            ],
+                          ),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.white,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(10.r),
+                          side: BorderSide(width: 1.w)
+                        )
+                      )),
                     ),
                   ],
                 ),

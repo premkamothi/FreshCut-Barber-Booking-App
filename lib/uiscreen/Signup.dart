@@ -253,28 +253,32 @@ class _SignupState extends State<Signup> with RouteAware {
                         ),
                       ),
                     ),
-                    SizedBox(height: 30.h),
-                    Center(
-                      child: Text("or", style: TextStyle(color: Colors.grey, fontSize: 15.sp)),
-                    ),
-                    SizedBox(height: 30.h),
+                    SizedBox(height: 100.h),
                     SizedBox(
                       height: 40.h,
                       width: 220.w,
-                      child: TextButton(
+                      child: ElevatedButton(
                         onPressed: _signInWithGoogle,
                         child: Row(
                           children: [
+                            SizedBox(width: 5.w),
                             Image.asset(
                               "assets/images/google_logo.png",
-                              height: 40.h,
-                              width: 40.w,
+                              height: 25.h,
+                              width: 25.w,
                             ),
                             SizedBox(width: 4.w),
                             Text("Continue with Google",
-                                style: TextStyle(color: Colors.black, fontSize: 15.sp)),
+                                style: TextStyle(color: Colors.black, fontSize: 14.sp)),
                           ],
                         ),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.white,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(10)
+                          ),
+                          side: BorderSide(width: 1)
+                        )
                       ),
                     ),
                   ],

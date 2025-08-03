@@ -6,6 +6,7 @@ import 'package:google_sign_in/google_sign_in.dart';
 import 'package:project_sem7/uiscreen/DashboardScreen.dart';
 import 'package:project_sem7/uiscreen/ForgetPassword.dart';
 import 'package:project_sem7/uiscreen/RegisterPage.dart';
+import 'package:project_sem7/uiscreen/Signupowner.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class Loginowner extends StatefulWidget {
@@ -90,7 +91,7 @@ class _LoginStateowner extends State<Loginowner> {
         body: SingleChildScrollView(
           child: Column(
             children: [
-              SizedBox(height: 70.h),
+              SizedBox(height: 50.h),
               Padding(
                 padding: const EdgeInsets.only(left: 23),
                 child: Text(
@@ -244,29 +245,46 @@ class _LoginStateowner extends State<Loginowner> {
                         ),
                       ),
                     ),
-                    SizedBox(height: 30.h),
-                    Center(
-                      child: Text("or", style: TextStyle(color: Colors.grey, fontSize: 15.sp)),
+                    SizedBox(height: 20.h),
+                    GestureDetector(
+                      onTap: ()
+                      {
+                        Navigator.push(context, MaterialPageRoute(builder: (context) => Signupowner()));
+                      },
+                      child: RichText(text: TextSpan(
+                          children: [
+                            TextSpan(text: "Don't have an account?",style: TextStyle(color: Colors.black,fontSize: 14.sp)),
+                            TextSpan(text: " Sign up" ,style: TextStyle(color: Colors.orange,fontSize: 14.sp)),
+                          ]
+                      )),
                     ),
-                    SizedBox(height: 30.h),
+                    SizedBox(height: 60.h),
                     SizedBox(
                       height: 40.h,
                       width: 220.w,
-                      child: TextButton(
+                      child: ElevatedButton(
                         onPressed: _signInWithGoogle,
                         child: Row(
                           children: [
+                            SizedBox(width: 5.w),
                             Image.asset(
                               "assets/images/google_logo.png",
-                              height: 40.h,
-                              width: 40.w,
+                              height: 25.h,
+                              width: 25.w,
                             ),
                             Text(
                               "Continue with Google",
-                              style: TextStyle(color: Colors.black, fontSize: 15.sp),
+                              style: TextStyle(color: Colors.black, fontSize: 14.sp),
                             ),
                           ],
                         ),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.white,
+                          side: BorderSide(width: 1.w),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(10.r)
+                          )
+                        )
                       ),
                     ),
                   ],

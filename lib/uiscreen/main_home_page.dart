@@ -4,7 +4,6 @@ import 'package:project_sem7/uiscreen/liked_shops.dart';
 import 'package:project_sem7/uiscreen/location_and_barber_shop.dart';
 import 'package:project_sem7/uiscreen/notification.dart';
 import 'package:project_sem7/uiscreen/settings.dart';
-
 import 'my_booking_page.dart';
 
 class MainHomePage extends StatefulWidget {
@@ -65,6 +64,7 @@ class _MainHomePageState extends State<MainHomePage> {
             )
         ),
       ),
+      body: Container(),
       bottomNavigationBar: Container(
         decoration: BoxDecoration(
           color: Colors.white,
@@ -92,7 +92,7 @@ class _MainHomePageState extends State<MainHomePage> {
             selectedItemColor: Colors.orange,
             unselectedItemColor: Colors.black,
             onTap: _onNavTap,
-            items: const [
+            items: [
               BottomNavigationBarItem(icon: Icon(Icons.home), label: "Home"),
               BottomNavigationBarItem(icon: Icon(Icons.calendar_today), label: "Booked"),
               BottomNavigationBarItem(icon: Icon(Icons.location_on), label: "Near shop"),

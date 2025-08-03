@@ -19,7 +19,6 @@ class _RegisterState extends State<Register> {
   final _formKey = GlobalKey<FormState>();
   final TextEditingController mobileController = TextEditingController();
   final ImagePicker _picker = ImagePicker();
-
   String? shopName;
   String? shopAddress;
   String? uid;
@@ -87,6 +86,7 @@ class _RegisterState extends State<Register> {
       final imageUrls = await uploadImagesToImageKit();
 
       await FirebaseFirestore.instance.collection('BarberShops').doc(uid).update({
+        'id': uid,
         'mobile': mobileController.text,
         'images': imageUrls,
       });
