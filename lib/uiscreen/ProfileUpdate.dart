@@ -3,7 +3,6 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-
 import 'StartingPage.dart';
 
 class Profileupdate extends StatefulWidget {
@@ -116,7 +115,7 @@ class _ProfileupdateState extends State<Profileupdate> {
             Navigator.pop(context);
           }, icon: Icon(Icons.arrow_back,color: Colors.black)),
           backgroundColor: Colors.white,
-          title: const Text("Update Profile", style: TextStyle(color: Colors.black)),
+          title: const Text("Profile", style: TextStyle(color: Colors.black)),
           iconTheme: const IconThemeData(color: Colors.black),
         ),
         body: SingleChildScrollView(

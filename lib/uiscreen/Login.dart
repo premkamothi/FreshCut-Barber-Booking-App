@@ -8,6 +8,7 @@ import 'package:project_sem7/uiscreen/Profile.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'Signup.dart';
+import 'bottom_nav_bar.dart';
 import 'main_home_page.dart';
 
 class Login extends StatefulWidget {
@@ -56,7 +57,7 @@ class _LoginState extends State<Login> {
         if (mounted) {
           Navigator.pushReplacement(
             context,
-            MaterialPageRoute(builder: (context) => MainHomePage()),
+            MaterialPageRoute(builder: (context) => BottomNavBar(initialIndex: 0)),
           );
         }
       } else {

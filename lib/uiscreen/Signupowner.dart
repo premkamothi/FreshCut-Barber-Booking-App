@@ -1,3 +1,4 @@
+import 'dart:developer';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
@@ -6,6 +7,9 @@ import 'package:google_sign_in/google_sign_in.dart';
 import 'package:project_sem7/uiscreen/DashboardScreen.dart';
 import 'package:project_sem7/uiscreen/RegisterPage.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+
+import '../Services.dart';
+import 'bottom_nav_bar.dart';
 
 
 class Signupowner extends StatefulWidget {
@@ -73,7 +77,7 @@ class _SignupownerState extends State<Signupowner> with RouteAware {
         if (mounted) {
           Navigator.pushReplacement(
             context,
-            MaterialPageRoute(builder: (context) => const Dashboardscreen()), // Replace with Dashboard if needed
+            MaterialPageRoute(builder: (context) => const BottomNavBar(initialIndex:0)), // Replace with Dashboard if needed
           );
         }
       } else {

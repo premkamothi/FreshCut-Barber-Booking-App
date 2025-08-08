@@ -1,9 +1,8 @@
 import 'package:flutter/material.dart';
-
-import 'liked_shops.dart';
-import 'location_and_barber_shop.dart';
-import 'main_home_page.dart';
-import 'my_booking_page.dart';
+import 'package:project_sem7/shop_profile/edit_shop_profile.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'bottom_nav_bar.dart';
 
 class Settings extends StatefulWidget {
   const Settings({super.key});
@@ -13,68 +12,95 @@ class Settings extends StatefulWidget {
 }
 
 class _SettingsState extends State<Settings> {
-  int _selectedIndex = 4;
+  bool hasOwnerProfile = false; // ✅ Will decide button visibility
+  bool isLoading = true;
 
-  void _onNavTap(int index){
-    setState(() {
-      _selectedIndex = index;
-    });
+  @override
+  void initState() {
+    super.initState();
+    _checkOwnerProfile();
+  }
 
-    if(index == 0){
-      Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => MainHomePage()));
-    }else if(index == 1){
-      Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => MyBookingPage()));
-    }else if(index == 2){
-      Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => LocationAndBarberShop()));
-    }else if(index == 3){
-      Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => LikedShops()));
-    }else if(index == 4){
-      Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => Settings()));
+  Future<void> _checkOwnerProfile() async {
+    try {
+      final user = FirebaseAuth.instance.currentUser;
+      if (user == null) {
+        setState(() {
+          hasOwnerProfile = false;
+          isLoading = false;
+        });
+        return;
+      }
+
+      final doc = await FirebaseFirestore.instance
+          .collection('BarberShops')
+          .doc(user.uid) // ✅ document ID is the UID in your register code
+          .get();
+
+      setState(() {
+        hasOwnerProfile = doc.exists; // true if profile exists
+        isLoading = false;
+      });
+    } catch (e) {
+      setState(() {
+        hasOwnerProfile = false;
+        isLoading = false;
+      });
     }
   }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body:
-      Center(
-        child: Text("settings"),
+      backgroundColor: Colors.white,
+      appBar: AppBar(
+        elevation: 0,
+        surfaceTintColor: Colors.transparent,
+        backgroundColor: Colors.white,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back, color: Colors.black),
+          onPressed: () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(builder: (context) => BottomNavBar(initialIndex: 0)),
+            );
+          },
+        ),
+        title: const Text("Settings", style: TextStyle(color: Colors.black)),
       ),
-      bottomNavigationBar: Container(
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.only(
-            topLeft: Radius.circular(20),
-            topRight: Radius.circular(20),
-          ),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black26,
-              blurRadius: 10,
-              offset: Offset(0, -3), // ⬅️ Shadow appears at the top side
+      body: isLoading
+          ? const Center(child: CircularProgressIndicator())
+          : Column(
+        children: [
+          const SizedBox(height: 16),
+          const Text("Settings Page", style: TextStyle(fontSize: 20)),
+          const SizedBox(height: 20),
+
+          // ✅ Show only if owner profile exists
+          if (hasOwnerProfile)
+            Center(
+              child: SizedBox(
+                width: 300,
+                child: ElevatedButton(
+                  onPressed: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (_) => const EditShopProfile()),
+                    );
+                  },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.orange,
+                    padding: const EdgeInsets.symmetric(horizontal: 80, vertical: 16),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                  ),
+                  child: const Text(
+                    "Edit Shop Profile",
+                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white),
+                  ),
+                ),
+              ),
             ),
-          ],
-        ),
-        child: ClipRRect(
-          borderRadius: BorderRadius.only(
-            topLeft: Radius.circular(20),
-            topRight: Radius.circular(20),
-          ),
-          child: BottomNavigationBar(
-            type: BottomNavigationBarType.fixed,
-            backgroundColor: Colors.white,
-            currentIndex: _selectedIndex,
-            selectedItemColor: Colors.orange,
-            unselectedItemColor: Colors.black,
-            onTap: _onNavTap,
-            items: const [
-              BottomNavigationBarItem(icon: Icon(Icons.home), label: "Home"),
-              BottomNavigationBarItem(icon: Icon(Icons.calendar_today), label: "Booked"),
-              BottomNavigationBarItem(icon: Icon(Icons.location_on), label: "Near shop"),
-              BottomNavigationBarItem(icon: Icon(Icons.favorite), label: "Liked shop"),
-              BottomNavigationBarItem(icon: Icon(Icons.settings), label: "Setting"),
-            ],
-          ),
-        ),
+        ],
       ),
     );
   }

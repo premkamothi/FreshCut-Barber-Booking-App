@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:project_sem7/Services.dart';
 import 'package:project_sem7/uiscreen/DashboardScreen.dart';
 import 'package:project_sem7/uiscreen/StartingPage.dart';
+import 'package:project_sem7/uiscreen/bottom_nav_bar.dart';
 import 'package:project_sem7/uiscreen/main_home_page.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:provider/provider.dart';
@@ -21,9 +23,9 @@ void main() async {
   if (!isLoggedIn) {
     initialScreen = Startingpage(); // choose owner or customer
   } else if (userType == 'owner') {
-    initialScreen = Dashboardscreen();
+    initialScreen = Services();
   } else if (userType == 'customer') {
-    initialScreen = MainHomePage();
+    initialScreen = BottomNavBar(initialIndex: 0);
   } else {
     initialScreen = Startingpage(); // fallback
   }

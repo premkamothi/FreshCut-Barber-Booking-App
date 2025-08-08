@@ -7,6 +7,8 @@ import 'package:project_sem7/uiscreen/Profile.dart';
 import 'package:project_sem7/uiscreen/main_home_page.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import 'bottom_nav_bar.dart';
+
 
 class Signup extends StatefulWidget {
   const Signup({super.key});
@@ -73,7 +75,7 @@ class _SignupState extends State<Signup> with RouteAware {
         if (mounted) {
           Navigator.pushReplacement(
             context,
-            MaterialPageRoute(builder: (context) => MainHomePage()),
+            MaterialPageRoute(builder: (context) => BottomNavBar(initialIndex: 0)),
           );
         }
       } else {

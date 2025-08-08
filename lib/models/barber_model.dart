@@ -6,7 +6,10 @@ class BarberModel {
   final String imageUrl;
   final double distanceKm;
   final double rating;
+  final double lat;
+  final double lng;
   bool isLiked;
+  final bool openNow;
 
   BarberModel({
     required this.name,
@@ -14,6 +17,9 @@ class BarberModel {
     required this.imageUrl,
     required this.distanceKm,
     required this.rating,
+    required this.lat,
+    required this.lng,
+    required this.openNow,
     this.isLiked = false,
   });
 

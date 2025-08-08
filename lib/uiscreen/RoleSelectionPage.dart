@@ -124,7 +124,7 @@ class _RoleSelectionPageState extends State<RoleSelectionPage>
                 fit: StackFit.expand,
                 children: [
                   Image.asset(
-                    'assets/images/images3.jpg',
+                    'assets/images/image3.jpg',
                     fit: BoxFit.cover,
                   ),
                   Align(

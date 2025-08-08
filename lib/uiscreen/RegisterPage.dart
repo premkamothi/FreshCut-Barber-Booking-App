@@ -139,7 +139,7 @@ class _RegisterpageState extends State<Registerpage> {
                         .collection('BarberShops')
                         .doc(uid)
                         .set({
-                      'id': userId,
+                      'ownerID': userId,
                       'name': name,
                       'address': address,
                       'email': ownerEmail,

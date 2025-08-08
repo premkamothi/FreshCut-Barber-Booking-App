@@ -4,11 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:http/http.dart' as http;
-import 'package:project_sem7/uiscreen/settings.dart';
 
-import 'liked_shops.dart';
-import 'main_home_page.dart';
-import 'my_booking_page.dart';
 
 class LocationAndBarberShop extends StatefulWidget {
   const LocationAndBarberShop({super.key});
@@ -24,25 +20,8 @@ class _LocationAndBarberShopState extends State<LocationAndBarberShop> {
   String _selectedShopName = '';
   final String apiKey = 'AIzaSyA5xVaMFV6c5rM4BCq1uVzUmXD_MxGwEZY';
 
-  int _selectedIndex = 2;
 
-  void _onNavTap(int index){
-    setState(() {
-      _selectedIndex = index;
-    });
 
-    if(index == 0){
-      Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => MainHomePage()));
-    }else if(index == 1){
-      Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => MyBookingPage()));
-    }else if(index == 2){
-      Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => LocationAndBarberShop()));
-    }else if(index == 3){
-      Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => LikedShops()));
-    }else if(index == 4){
-      Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => Settings()));
-    }
-  }
 
   @override
   void initState() {
@@ -181,43 +160,6 @@ class _LocationAndBarberShopState extends State<LocationAndBarberShop> {
               ),
             ),
         ],
-      ),
-      bottomNavigationBar: Container(
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.only(
-            topLeft: Radius.circular(20),
-            topRight: Radius.circular(20),
-          ),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black26,
-              blurRadius: 10,
-              offset: Offset(0, -3), // ⬅️ Shadow appears at the top side
-            ),
-          ],
-        ),
-        child: ClipRRect(
-          borderRadius: BorderRadius.only(
-            topLeft: Radius.circular(20),
-            topRight: Radius.circular(20),
-          ),
-          child: BottomNavigationBar(
-            type: BottomNavigationBarType.fixed,
-            backgroundColor: Colors.white,
-            currentIndex: _selectedIndex,
-            selectedItemColor: Colors.orange,
-            unselectedItemColor: Colors.black,
-            onTap: _onNavTap,
-            items: const [
-              BottomNavigationBarItem(icon: Icon(Icons.home), label: "Home"),
-              BottomNavigationBarItem(icon: Icon(Icons.calendar_today), label: "Booked"),
-              BottomNavigationBarItem(icon: Icon(Icons.location_on), label: "Near shop"),
-              BottomNavigationBarItem(icon: Icon(Icons.favorite), label: "Liked shop"),
-              BottomNavigationBarItem(icon: Icon(Icons.settings), label: "Setting"),
-            ],
-          ),
-        ),
       ),
     );
   }

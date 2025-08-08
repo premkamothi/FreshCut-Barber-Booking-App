@@ -6,7 +6,9 @@ import 'package:http/http.dart' as http;
 import 'package:image_picker/image_picker.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:project_sem7/Services.dart';
 import 'package:project_sem7/uiscreen/DashboardScreen.dart';
+import 'package:project_sem7/uiscreen/main_home_page.dart';
 
 class Register extends StatefulWidget {
   const Register({super.key});
@@ -97,7 +99,7 @@ class _RegisterState extends State<Register> {
 
       Navigator.pushReplacement(
         context,
-        MaterialPageRoute(builder: (context) => Dashboardscreen()),
+        MaterialPageRoute(builder: (context) => MainHomePage()),
       );
     } catch (e) {
       debugPrint("Error: $e");

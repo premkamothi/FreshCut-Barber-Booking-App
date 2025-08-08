@@ -24,7 +24,7 @@ class _StartingpageState extends State<Startingpage> {
       "title": "Find Barbers and Salons Easily in Your Hands"
     },
     {
-      "image": "assets/images/images3.jpg",
+      "image": "assets/images/image3.jpg",
       "title": "Book Your Favorite Barber Quickly"
     },
     {

@@ -16,7 +16,7 @@ class BarberCardList extends StatelessWidget {
       height: 300,
       child: ListView.separated(
         scrollDirection: Axis.horizontal,
-        padding: const EdgeInsets.symmetric(horizontal: 16),
+        padding: const EdgeInsets.symmetric(horizontal: 6),
         itemCount: barbers.length,
         separatorBuilder: (context, index) => const SizedBox(width: 12),
         itemBuilder: (context, index) {
@@ -26,6 +26,7 @@ class BarberCardList extends StatelessWidget {
           return SizedBox(
             width: 180,
             child: Card(
+              color: Colors.white,
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(22),
               ),
@@ -56,12 +57,12 @@ class BarberCardList extends StatelessWidget {
 
                       // Like Button
                       Positioned(
-                        top: 10,
-                        right: 10,
+                        top: 6,
+                        right: 6,
                         child: IconButton(
                           icon: Icon(
                             isLiked ? Icons.favorite : Icons.favorite_border,
-                            color: isLiked ? Colors.red : Colors.grey,
+                            color: isLiked ? Color(0xFFF31E1E) : Colors.grey[600],
                           ),
                           onPressed: () {
                             likedProvider.toggleLike(barber);
@@ -79,6 +80,8 @@ class BarberCardList extends StatelessWidget {
                       children: [
                         Text(
                           barber.name,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
                           style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
                         ),
                         const SizedBox(height: 4),
@@ -93,7 +96,7 @@ class BarberCardList extends StatelessWidget {
                           children: [
                             const Icon(Icons.location_on, size: 16, color: Colors.orange),
                             const SizedBox(width: 4),
-                            Text('${barber.distanceKm.toStringAsFixed(1)} km', style: const TextStyle(fontSize: 12)),
+                            Text('${barber.distanceKm.toStringAsFixed(2)} km', style: const TextStyle(fontSize: 12)),
                             const SizedBox(width: 8),
                             const Icon(Icons.star, size: 16, color: Colors.orange),
                             const SizedBox(width: 4),

@@ -1,12 +1,15 @@
 import 'package:flutter/material.dart';
-import 'package:project_sem7/uiscreen/settings.dart';
+import '../shop_profile/edit_shop_profile.dart';
+import '../shop_profile/shop_profile.dart';
 import 'liked_shops.dart';
 import 'location_and_barber_shop.dart';
 import 'main_home_page.dart';
 import 'my_booking_page.dart';
+import 'settings.dart';
 
 class BottomNavBar extends StatefulWidget {
   final int initialIndex;
+
   const BottomNavBar({super.key, this.initialIndex = 0});
 
   @override
@@ -14,104 +17,57 @@ class BottomNavBar extends StatefulWidget {
 }
 
 class _BottomNavBarState extends State<BottomNavBar> {
+  late int _selectedIndex;
 
-  late int selectedIndex;
+  final List<Widget> _pages = const [
+    MainHomePage(),
+    MyBookingPage(),
+    LocationAndBarberShop(),
+    LikedShops(),
+    Settings(),
+  ];
 
   @override
   void initState() {
     super.initState();
-    selectedIndex = widget.initialIndex;
+    _selectedIndex = widget.initialIndex;
   }
 
-  Widget _buildIcon(int index, IconData iconData, {VoidCallback? onTap}) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16.0),
-      child: GestureDetector(
-        onTap: () {
-          setState(() {
-            selectedIndex = index;
-          });
-          if (onTap != null) onTap();
-        },
-        child: Icon(
-          iconData,
-          color: selectedIndex == index ? Colors.red : Colors.grey[600],
-        ),
-      ),
-    );
+  void _onNavTap(int index) {
+    setState(() {
+      _selectedIndex = index;
+    });
   }
-
-
 
   @override
   Widget build(BuildContext context) {
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(12.0),
-        child: Card(
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(30),
-          ),
-          child: Container(
-            height: 60,
-            width: 220,
-            padding: const EdgeInsets.symmetric(vertical: 6,horizontal: 24),
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(20),
-            ),
-            child: ClipRRect(
-              borderRadius: BorderRadius.circular(20),
-              child: SingleChildScrollView(
-                scrollDirection: Axis.horizontal,
-                physics: const BouncingScrollPhysics(),
-                child: Row(
-                  children: [
-                    //home
-                    _buildIcon(0, Icons.home, onTap: () {
-                      Navigator.pushReplacement(
-                        context,
-                        MaterialPageRoute(builder: (context) => const MainHomePage()),
-                      );
-                    }),
-
-                    //my booking page
-                    _buildIcon(1, Icons.calendar_today, onTap: () {
-                      Navigator.pushReplacement(
-                        context,
-                        MaterialPageRoute(builder: (context) => const MyBookingPage()),
-                      );
-                    }),
-
-                    //location
-                    _buildIcon(2, Icons.location_on, onTap: () {
-                      Navigator.pushReplacement(
-                        context,
-                        MaterialPageRoute(builder: (context) => const LocationAndBarberShop()),
-                      );
-                    }),
-
-                    //liked shops
-                    _buildIcon(3, Icons.favorite, onTap: () {
-                      Navigator.pushReplacement(
-                        context,
-                        MaterialPageRoute(builder: (context) => const LikedShops()),
-                      );
-                    }),
-
-                    //settings
-                    _buildIcon(4, Icons.settings, onTap: () {
-                      Navigator.pushReplacement(
-                        context,
-                        MaterialPageRoute(builder: (context) => const Settings()),
-                      );
-                    }),
-                  ],
-                ),
-              ),
-            ),
-          ),
-        ),
+    return Scaffold(
+      backgroundColor: Colors.white,
+      body: IndexedStack(
+        index: _selectedIndex,
+        children: _pages,
       ),
+      bottomNavigationBar: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          BottomNavigationBar(
+            type: BottomNavigationBarType.fixed,
+            backgroundColor: Colors.white,
+            currentIndex: _selectedIndex,
+            selectedItemColor: Colors.orange,
+            unselectedItemColor: Colors.grey[700],
+            onTap: _onNavTap,
+            items: const [
+              BottomNavigationBarItem(icon: Icon(Icons.home), label: "Home"),
+              BottomNavigationBarItem(icon: Icon(Icons.calendar_today), label: "Booked"),
+              BottomNavigationBarItem(icon: Icon(Icons.location_on), label: "Near shop"),
+              BottomNavigationBarItem(icon: Icon(Icons.favorite), label: "Liked shop"),
+              BottomNavigationBarItem(icon: Icon(Icons.settings), label: "Setting"),
+            ],
+          ),
+        ],
+      ),
+
     );
   }
 }
