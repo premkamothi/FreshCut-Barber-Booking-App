@@ -1,11 +1,10 @@
 import 'dart:convert';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:project_sem7/uiscreen/ProfileUpdate.dart';
-import 'package:project_sem7/uiscreen/notification.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import '../models/barber_model.dart';
-import '../shop_profile/edit_shop_profile.dart';
 import '../shop_profile/shop_profile.dart';
 import '../widgets/custom_search_bar.dart';
 import 'barber_card_list.dart';
@@ -19,12 +18,13 @@ class MainHomePage extends StatefulWidget {
   State<MainHomePage> createState() => _MainHomePageState();
 }
 
-class GooglePlacesService{
+class GooglePlacesService {
   final String _apiKey = 'AIzaSyA5xVaMFV6c5rM4BCq1uVzUmXD_MxGwEZY';
 
-  Future<List<BarberModel>> getNearbyBarbers(double userLat, double userLng) async {
-    final url = Uri.parse(
-        'https://maps.googleapis.com/maps/api/place/nearbysearch/json'
+  Future<List<BarberModel>> getNearbyBarbers(
+      double userLat, double userLng) async {
+    final url =
+        Uri.parse('https://maps.googleapis.com/maps/api/place/nearbysearch/json'
             '?location=$userLat,$userLng'
             '&radius=10000'
             '&type=hair_care'
@@ -39,7 +39,8 @@ class GooglePlacesService{
         final lat = place['geometry']['location']['lat'];
         final lng = place['geometry']['location']['lng'];
 
-        final distanceInMeters = Geolocator.distanceBetween(userLat, userLng, lat, lng);
+        final distanceInMeters =
+            Geolocator.distanceBetween(userLat, userLng, lat, lng);
         final distanceKm = distanceInMeters / 1000;
 
         return BarberModel(
@@ -52,7 +53,9 @@ class GooglePlacesService{
           rating: (place['rating'] ?? 0).toDouble(),
           lat: lat,
           lng: lng,
-          openNow: place['opening_hours'] != null ? place['opening_hours']['open_now'] : false,
+          openNow: place['opening_hours'] != null
+              ? place['opening_hours']['open_now']
+              : false,
         );
       }).toList();
 
@@ -89,7 +92,8 @@ Future<Position> _getCurrentPosition() async {
   }
 
   // Get current position
-  return await Geolocator.getCurrentPosition(desiredAccuracy: LocationAccuracy.high);
+  return await Geolocator.getCurrentPosition(
+      desiredAccuracy: LocationAccuracy.high);
 }
 
 void getLocation() async {
@@ -128,14 +132,10 @@ Future<String> getCityFromCoordinates(double lat, double lng) async {
     print('Geocoding failed: ${data['status']}');
     print(jsonEncode(data)); // Optional: see full response in debug console
     throw Exception("Failed to fetch city");
-
   }
-
 }
 
-
 class _MainHomePageState extends State<MainHomePage> {
-
   late Future<List<BarberModel>> _barberFuture;
   final List<String> _services = ["All", "Service 1", "Service 2", "Service 3"];
   String _selectedService = "All";
@@ -156,7 +156,7 @@ class _MainHomePageState extends State<MainHomePage> {
           backgroundColor: isSelected ? Colors.orangeAccent : Colors.white,
           foregroundColor: isSelected ? Colors.white : Colors.orangeAccent,
           elevation: 0,
-          side:  BorderSide(
+          side: BorderSide(
             color: Colors.orangeAccent,
             width: 2.8,
           ),
@@ -170,39 +170,26 @@ class _MainHomePageState extends State<MainHomePage> {
     );
   }
 
-
-  String? _userName;
-
-
-  Future<void> _loadUserName() async {
-    final prefs = await SharedPreferences.getInstance();
-    setState(() {
-      _userName = prefs.getString('userName') ?? '';
-    });
-  }
-
   String _getGreetingMessage(String userName) {
     final hour = DateTime.now().hour;
     String greeting;
     String emoji;
 
     if (hour >= 5 && hour < 12) {
-      greeting = "Good Morning";
+      greeting = "Morning";
       emoji = "🌅";
     } else if (hour >= 12 && hour < 17) {
-      greeting = "Good Afternoon";
+      greeting = "Afternoon";
       emoji = "☀️";
     } else if (hour >= 17 && hour < 21) {
-      greeting = "Good Evening";
+      greeting = "Evening";
       emoji = "🌇";
     } else {
-      greeting = "Good Night";
+      greeting = "Night";
       emoji = "🌙";
     }
-
     return "$greeting, ${_capitalize(userName)} $emoji";
   }
-
 
   String _capitalize(String name) {
     if (name.isEmpty) return '';
@@ -212,9 +199,9 @@ class _MainHomePageState extends State<MainHomePage> {
   @override
   void initState() {
     super.initState();
-    _loadUserName();
     _barberFuture = _getCurrentPosition()
-        .then((position) => GooglePlacesService().getNearbyBarbers(position.latitude, position.longitude))
+        .then((position) => GooglePlacesService()
+            .getNearbyBarbers(position.latitude, position.longitude))
         .catchError((e) {
       print('Location error: $e');
       return <BarberModel>[];
@@ -240,7 +227,8 @@ class _MainHomePageState extends State<MainHomePage> {
                 SizedBox(
                   height: 30,
                   width: 30,
-                  child: Image.asset("assets/images/WhatsApp_Image_2025-07-11_at_20.05.12_409f80dc-removebg-preview.png"),
+                  child: Image.asset(
+                      "assets/images/WhatsApp_Image_2025-07-11_at_20.05.12_409f80dc-removebg-preview.png"),
                 ),
                 const SizedBox(width: 10),
                 const Text(
@@ -250,25 +238,37 @@ class _MainHomePageState extends State<MainHomePage> {
                 const Spacer(),
                 IconButton(
                   onPressed: () {
-                    Navigator.push(context, MaterialPageRoute(builder: (context) => ShopProfile()));
+                    Navigator.push(context,
+                        MaterialPageRoute(builder: (context) => ShopProfile(barberData: null,)));
                   },
                   icon: const Icon(Icons.notifications_active_outlined),
                 ),
                 IconButton(
                   onPressed: () {
-                    Navigator.push(context, MaterialPageRoute(builder: (context) => Profileupdate()));
+                    Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                            builder: (context) => Profileupdate()));
                   },
                   icon: const Icon(Icons.account_circle_outlined),
                 ),
               ],
             ),
             const SizedBox(height: 8),
-            if (_userName != null && _userName!.isNotEmpty)
-              Text(
-                _getGreetingMessage(_userName ?? ''),
-                style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
-              ),
-
+            StreamBuilder<DocumentSnapshot>(
+              stream: FirebaseFirestore.instance
+                  .collection('ProfileDetail')
+                  .doc(FirebaseAuth.instance.currentUser!.uid)
+                  .snapshots(),
+              builder: (context, snapshot) {
+                if (!snapshot.hasData) return SizedBox();
+                final userName = snapshot.data!['name'] ?? '';
+                return Text(
+                  _getGreetingMessage(userName),
+                  style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
+                );
+              },
+            )
           ],
         ),
       ),
@@ -301,38 +301,41 @@ class _MainHomePageState extends State<MainHomePage> {
                   ),
                 ),
 
-
                 Padding(
                   padding: const EdgeInsets.only(left: 12, right: 12, top: 4),
                   child: Row(
                     children: [
                       const Text(
                         "Nearby Your Barber",
-                        style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                        style: TextStyle(
+                            fontSize: 16, fontWeight: FontWeight.bold),
                       ),
                       const Spacer(),
                       TextButton(
                         onPressed: () async {
                           try {
                             final position = await _getCurrentPosition();
-                            final city = await getCityFromCoordinates(position.latitude, position.longitude);
+                            final city = await getCityFromCoordinates(
+                                position.latitude, position.longitude);
 
                             if (!mounted) return;
 
                             Navigator.push(
                               context,
                               MaterialPageRoute(
-                                builder: (context) => CityBarberListScreen(cityName: city),
+                                builder: (context) =>
+                                    CityBarberListScreen(cityName: city),
                               ),
                             );
                           } catch (e) {
                             print("Error getting city: $e");
                             ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(content: Text("Failed to fetch city. Please try again.")),
+                              SnackBar(
+                                  content: Text(
+                                      "Failed to fetch city. Please try again.")),
                             );
                           }
                         },
-
                         child: const Text(
                           "See All",
                           style: TextStyle(
@@ -342,22 +345,22 @@ class _MainHomePageState extends State<MainHomePage> {
                           ),
                         ),
                       ),
-
                     ],
                   ),
                 ),
 
-               //const SizedBox(height: 10),
+                //const SizedBox(height: 10),
                 SizedBox(
                   child: SingleChildScrollView(
                     scrollDirection: Axis.horizontal,
                     padding: const EdgeInsets.symmetric(horizontal: 6),
                     child: Row(
-                      children: _services.map((service) => _buildServiceButton(service)).toList(),
+                      children: _services
+                          .map((service) => _buildServiceButton(service))
+                          .toList(),
                     ),
                   ),
                 ),
-
 
                 BarberCardList(barbers: barbers),
 
@@ -367,7 +370,6 @@ class _MainHomePageState extends State<MainHomePage> {
           }
         },
       ),
-
     );
   }
 }

@@ -15,6 +15,7 @@ class Registerpage extends StatefulWidget {
 }
 
 class _RegisterpageState extends State<Registerpage> {
+
   final TextEditingController searchController = TextEditingController();
   final String apiKey = "AIzaSyA5xVaMFV6c5rM4BCq1uVzUmXD_MxGwEZY"; // Replace with your Google Places API Key
   List<dynamic> barberShops = [];
@@ -23,7 +24,9 @@ class _RegisterpageState extends State<Registerpage> {
 
   Future<void> searchGlobalBarbers(String query) async {
     if (query.trim().isEmpty) return;
-    final encodedQuery = Uri.encodeComponent(query);
+
+    // Force search to be "barber in <query>"
+    final encodedQuery = Uri.encodeComponent("barber in $query");
     final url =
         "https://maps.googleapis.com/maps/api/place/textsearch/json?query=$encodedQuery&type=hair_care&key=$apiKey";
 
@@ -43,6 +46,8 @@ class _RegisterpageState extends State<Registerpage> {
       setState(() => isLoading = false);
     }
   }
+
+
 
   @override
   void initState() {

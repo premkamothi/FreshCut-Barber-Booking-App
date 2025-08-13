@@ -2,8 +2,11 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:project_sem7/shop_profile/shop_profile.dart';
 import 'package:project_sem7/uiscreen/DashboardScreen.dart';
-import 'package:project_sem7/uiscreen/Register.dart';
+import 'package:project_sem7/uiscreen/barber_card_list.dart';
+
+import 'models/barber_model.dart';
 
 class Services extends StatefulWidget {
   const Services({super.key});
@@ -21,6 +24,8 @@ class _ServicesState extends State<Services> {
     'Hair Color',
     'Hair Spa',
   ];
+
+  late final List<BarberModel> barbers;
 
   List<Map<String, String?>> serviceList = [
     {'service': null, 'price': null},
@@ -68,10 +73,7 @@ class _ServicesState extends State<Services> {
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
           onPressed: () {
-            Navigator.pushReplacement(
-              context,
-              MaterialPageRoute(builder: (context) => Register()),
-            );
+            Navigator.pop(context);
           },
         ),
         title: const Text("Set Your Services"),

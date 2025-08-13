@@ -12,38 +12,46 @@ class Settings extends StatefulWidget {
 }
 
 class _SettingsState extends State<Settings> {
-  bool hasOwnerProfile = false; // ✅ Will decide button visibility
+  bool hasOwnerRole = false; // ✅ Decides button visibility
   bool isLoading = true;
 
   @override
   void initState() {
     super.initState();
-    _checkOwnerProfile();
+    _checkOwnerRole();
   }
 
-  Future<void> _checkOwnerProfile() async {
+  Future<void> _checkOwnerRole() async {
     try {
       final user = FirebaseAuth.instance.currentUser;
       if (user == null) {
         setState(() {
-          hasOwnerProfile = false;
+          hasOwnerRole = false;
           isLoading = false;
         });
         return;
       }
 
       final doc = await FirebaseFirestore.instance
-          .collection('BarberShops')
-          .doc(user.uid) // ✅ document ID is the UID in your register code
+          .collection('ProfileDetail')
+          .doc(user.uid)
           .get();
 
-      setState(() {
-        hasOwnerProfile = doc.exists; // true if profile exists
-        isLoading = false;
-      });
+      if (doc.exists && doc.data() != null) {
+        final data = doc.data()!;
+        setState(() {
+          hasOwnerRole = data['ownerRole'] == true;
+          isLoading = false;
+        });
+      } else {
+        setState(() {
+          hasOwnerRole = false;
+          isLoading = false;
+        });
+      }
     } catch (e) {
       setState(() {
-        hasOwnerProfile = false;
+        hasOwnerRole = false;
         isLoading = false;
       });
     }
@@ -62,7 +70,7 @@ class _SettingsState extends State<Settings> {
           onPressed: () {
             Navigator.push(
               context,
-              MaterialPageRoute(builder: (context) => BottomNavBar(initialIndex: 0)),
+              MaterialPageRoute(builder: (context) => const BottomNavBar(initialIndex: 0)),
             );
           },
         ),
@@ -76,8 +84,8 @@ class _SettingsState extends State<Settings> {
           const Text("Settings Page", style: TextStyle(fontSize: 20)),
           const SizedBox(height: 20),
 
-          // ✅ Show only if owner profile exists
-          if (hasOwnerProfile)
+          // ✅ Show only if ownerRole is true
+          if (hasOwnerRole)
             Center(
               child: SizedBox(
                 width: 300,
@@ -95,7 +103,11 @@ class _SettingsState extends State<Settings> {
                   ),
                   child: const Text(
                     "Edit Shop Profile",
-                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white),
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.white,
+                    ),
                   ),
                 ),
               ),

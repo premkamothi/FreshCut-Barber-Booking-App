@@ -216,7 +216,7 @@ class _LoginState extends State<Login> {
                               if (mounted) {
                                 Navigator.pushReplacement(
                                   context,
-                                  MaterialPageRoute(builder: (context) => const MainHomePage()),
+                                  MaterialPageRoute(builder: (context) => const BottomNavBar(initialIndex: 0)),
                                 );
                               }
                             } on FirebaseAuthException catch (e) {

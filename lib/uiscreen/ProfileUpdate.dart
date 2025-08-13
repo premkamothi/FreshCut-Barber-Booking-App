@@ -94,14 +94,38 @@ class _ProfileupdateState extends State<Profileupdate> {
       'timestamp': FieldValue.serverTimestamp(),
     };
 
-    await FirebaseFirestore.instance.collection('ProfileDetail').doc(uid).update(data);
+    final firestore = FirebaseFirestore.instance;
 
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setString('userName', _nameController.text.trim());
-    await prefs.setInt('selectedAvatarIndex', _selectedAvatarIndex);
+    try {
+      // Use batch to update both collections at once
+      final batch = firestore.batch();
 
-// Return to drawer
-    Navigator.pop(context, true);
+      final profileRef = firestore.collection('ProfileDetail').doc(uid);
+
+      batch.update(profileRef, data);
+
+      await batch.commit();
+
+      // Save locally in SharedPreferences
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString('userName', _nameController.text.trim());
+      await prefs.setInt('selectedAvatarIndex', _selectedAvatarIndex);
+
+      // Show success message
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Profile updated successfully!')),
+        );
+      }
+
+      Navigator.pop(context, true);
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error updating profile: $e')),
+        );
+      }
+    }
   }
 
   @override

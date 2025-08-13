@@ -4,14 +4,14 @@
   ],
   "cleanCommandsComponents": [
     [
-      "C:\\Users\\hp5cd\\AppData\\Local\\Android\\Sdk\\cmake\\3.22.1\\bin\\ninja.exe",
+      "C:\\Users\\hp5cd\\AppData\\Local\\Android\\sdk\\cmake\\3.22.1\\bin\\ninja.exe",
       "-C",
       "D:\\Flutter_project\\BarberBookingApp\\android\\app\\.cxx\\Debug\\6t211z33\\x86",
       "clean"
     ]
   ],
   "buildTargetsCommandComponents": [
-    "C:\\Users\\hp5cd\\AppData\\Local\\Android\\Sdk\\cmake\\3.22.1\\bin\\ninja.exe",
+    "C:\\Users\\hp5cd\\AppData\\Local\\Android\\sdk\\cmake\\3.22.1\\bin\\ninja.exe",
     "-C",
     "D:\\Flutter_project\\BarberBookingApp\\android\\app\\.cxx\\Debug\\6t211z33\\x86",
     "{LIST_OF_TARGETS_TO_BUILD}"

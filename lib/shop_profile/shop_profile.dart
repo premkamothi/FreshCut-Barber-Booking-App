@@ -1,27 +1,25 @@
 import 'dart:developer';
-
 import 'package:flutter/material.dart';
 import 'package:project_sem7/booking/book_now_page.dart';
-
 import '../Services.dart';
+import '../models/barber_model.dart';
 
 class ShopProfile extends StatefulWidget {
-  const ShopProfile({super.key});
+  final BarberModel? barberData;
+
+  const ShopProfile({super.key, this.barberData});
 
   @override
   State<ShopProfile> createState() => _ShopProfileState();
 }
 
 class _ShopProfileState extends State<ShopProfile> {
-
   final lightOrange = const Color(0xFFFFFAF2);
   final orange = Colors.orangeAccent;
   final PageController _pageController = PageController();
   int _currentPage = 0;
   final String monToFriHours = "10:00 AM - 8:00 PM";
   final String satToSunHours = "9:00 AM - 6:00 PM";
-
-
 
   @override
   Widget build(BuildContext context) {
@@ -31,7 +29,6 @@ class _ShopProfileState extends State<ShopProfile> {
         children: [
           Positioned.fill(
             child: SingleChildScrollView(
-              //padding: const EdgeInsets.all(12),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -49,7 +46,7 @@ class _ShopProfileState extends State<ShopProfile> {
                             });
                           },
                           children: [
-                            _buildImageCard('assets/images/image1.jpg'),
+                            _buildImageCard(widget.barberData?.imageUrl ?? 'assets/images/image1.jpg'),
                             _buildImageCard('assets/images/image2.jpg'),
                             _buildImageCard('assets/images/image3.jpg'),
                           ],
@@ -76,14 +73,13 @@ class _ShopProfileState extends State<ShopProfile> {
                     ),
                   ),
 
-
                   const SizedBox(height: 20),
 
                   // Shop Name
                   Padding(
-                    padding: const EdgeInsets.only(right:12,left:12),
+                    padding: const EdgeInsets.only(right: 12, left: 12),
                     child: Text(
-                      "The Barber",
+                      widget.barberData?.name ?? "The Barber",
                       style: const TextStyle(
                         fontSize: 24,
                         fontWeight: FontWeight.bold,
@@ -95,28 +91,71 @@ class _ShopProfileState extends State<ShopProfile> {
 
                   // Location
                   Padding(
-                    padding: const EdgeInsets.only(right:12,left:10),
+                    padding: const EdgeInsets.only(right: 12, left: 10),
                     child: Row(
                       children: [
                         const Icon(Icons.location_on, color: Colors.orangeAccent),
                         const SizedBox(width: 5),
-                        Text(
-                          "123 Main Street, City",
-                          style: TextStyle(fontSize: 16,color: Colors.grey[500]),
+                        Expanded(
+                          child: Text(
+                            widget.barberData?.address ?? "123 Main Street, City",
+                            style: TextStyle(fontSize: 16, color: Colors.grey[500]),
+                            overflow: TextOverflow.ellipsis,
+                          ),
                         ),
                       ],
                     ),
                   ),
+
                   const SizedBox(height: 8),
+
+                  // Distance (only show if barberData exists)
+                  if (widget.barberData != null) ...[
+                    Padding(
+                      padding: const EdgeInsets.only(right: 12, left: 12),
+                      child: Row(
+                        children: [
+                          const Icon(Icons.directions_walk, color: Colors.orangeAccent, size: 20),
+                          const SizedBox(width: 8),
+                          Text(
+                            "${widget.barberData!.distanceKm.toStringAsFixed(1)} km away",
+                            style: TextStyle(fontSize: 14, color: Colors.grey[500]),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                  ],
 
                   // Ratings
                   Padding(
-                    padding: const EdgeInsets.only(right:12,left:12),
+                    padding: const EdgeInsets.only(right: 12, left: 12),
                     child: Row(
                       children: [
                         const Icon(Icons.star, color: Colors.orangeAccent, size: 20),
                         const SizedBox(width: 8),
-                        Text("5.0 (120 reviews)", style: TextStyle(fontSize: 14,color: Colors.grey[500])),
+                        Text(
+                          "${widget.barberData?.rating ?? 5.0} (120 reviews)",
+                          style: TextStyle(fontSize: 14, color: Colors.grey[500]),
+                        ),
+                        const Spacer(),
+                        // Open/Closed Status (only show if barberData exists)
+                        if (widget.barberData != null)
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                            decoration: BoxDecoration(
+                              color: widget.barberData!.openNow ? Colors.green : Colors.red,
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: Text(
+                              widget.barberData!.openNow ? "Open Now" : "Closed",
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 12,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ),
                       ],
                     ),
                   ),
@@ -138,27 +177,29 @@ class _ShopProfileState extends State<ShopProfile> {
                           // Example: launch a phone call (use url_launcher package)
                         }),
                         _buildServiceCircle(Icons.directions, "Direction", () {
-                          Navigator.push(context, MaterialPageRoute(builder: (_) => const Services()));
+                          // Open Google Maps with coordinates (only if barberData exists)
+                          if (widget.barberData != null) {
+                            _openGoogleMaps(widget.barberData!.lat, widget.barberData!.lng);
+                          }
                         }),
                         _buildServiceCircle(Icons.info, "About Us", () {
                           Navigator.push(context, MaterialPageRoute(builder: (_) => const Services()));
                         }),
                       ],
                     ),
-
                   ),
 
-                  const SizedBox(height: 6,),
+                  const SizedBox(height: 6),
 
                   Padding(
-                    padding: const EdgeInsets.only(right:12,left:12),
-                    child: Divider(color: Colors.grey[200],),
+                    padding: const EdgeInsets.only(right: 12, left: 12),
+                    child: Divider(color: Colors.grey[200]),
                   ),
 
                   const SizedBox(height: 8),
 
                   Padding(
-                    padding: const EdgeInsets.only(right:12,left:12),
+                    padding: const EdgeInsets.only(right: 12, left: 12),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
@@ -192,9 +233,7 @@ class _ShopProfileState extends State<ShopProfile> {
                     ),
                   ),
 
-                  //const SizedBox(height: 20),
-
-                  // Our Specialist title + See All button
+                  // Our Specialist title
                   Padding(
                     padding: const EdgeInsets.only(top: 16, right: 12, left: 12),
                     child: Row(
@@ -212,15 +251,15 @@ class _ShopProfileState extends State<ShopProfile> {
 
                   // Horizontal scrollable small cards
                   SizedBox(
-                    height: 140, // Adjust height as needed
+                    height: 140,
                     child: ListView(
                       scrollDirection: Axis.horizontal,
                       padding: const EdgeInsets.symmetric(horizontal: 12),
                       children: [
-                        _buildSpecialistCard("assets/images/daer_2.jpeg", "John Doe", "Sr. Barber"),
-                        _buildSpecialistCard("assets/images/daer_2.jpeg", "Mike Trim", "Sr. Barber"),
-                        _buildSpecialistCard("assets/images/daer_2.jpeg", "Alex Fade", "Jr. Barber"),
-                        _buildSpecialistCard("assets/images/daer_2.jpeg", "Alex Fade", "Jr. Barber"),
+                        _buildSpecialistCard("assets/images/image1.jpg", "John Doe", "Sr. Barber"),
+                        _buildSpecialistCard("assets/images/image3.jpg", "Mike Trim", "Sr. Barber"),
+                        _buildSpecialistCard("assets/images/image2.jpg", "Alex Fade", "Jr. Barber"),
+                        _buildSpecialistCard("assets/images/image1.jpg", "Alex Fade", "Jr. Barber"),
                       ],
                     ),
                   ),
@@ -229,6 +268,8 @@ class _ShopProfileState extends State<ShopProfile> {
               ),
             ),
           ),
+
+          // Book Now Button
           Positioned(
             bottom: 0,
             left: 0,
@@ -246,9 +287,7 @@ class _ShopProfileState extends State<ShopProfile> {
                 width: double.infinity,
                 height: 50,
                 child: ElevatedButton(
-                  onPressed: () {
-                    Navigator.push(context, MaterialPageRoute(builder: (_) => const BookNowPage()));
-                  },
+                  onPressed: () {},
                   style: ElevatedButton.styleFrom(
                     backgroundColor: Colors.orangeAccent,
                     shape: RoundedRectangleBorder(
@@ -268,21 +307,38 @@ class _ShopProfileState extends State<ShopProfile> {
               ),
             ),
           ),
-
-
         ],
       ),
     );
   }
 
-  Widget _buildImageCard(String assetPath) {
+  Widget _buildImageCard(String imageUrl) {
     return ClipRRect(
-      borderRadius: BorderRadius.zero, // Remove rounded corners if you want it flush
-      child: Image.asset(
-        assetPath,
+      borderRadius: BorderRadius.zero,
+      child: imageUrl.startsWith('http')
+          ? Image.network(
+        imageUrl,
         width: MediaQuery.of(context).size.width,
         height: 256,
-        fit: BoxFit.cover, // Cover the entire area like Instagram post
+        fit: BoxFit.cover,
+        errorBuilder: (context, error, stackTrace) {
+          return Container(
+            width: MediaQuery.of(context).size.width,
+            height: 256,
+            color: Colors.grey[200],
+            child: const Icon(
+              Icons.image_not_supported,
+              size: 50,
+              color: Colors.grey,
+            ),
+          );
+        },
+      )
+          : Image.asset(
+        imageUrl,
+        width: MediaQuery.of(context).size.width,
+        height: 256,
+        fit: BoxFit.cover,
       ),
     );
   }
@@ -311,11 +367,10 @@ class _ShopProfileState extends State<ShopProfile> {
     );
   }
 
-
   Widget _buildSpecialistCard(String imagePath, String name, String role) {
     return Container(
       width: 110,
-      height: 160, // Fixed height to avoid overflow
+      height: 160,
       margin: const EdgeInsets.only(right: 12),
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(26),
@@ -325,13 +380,13 @@ class _ShopProfileState extends State<ShopProfile> {
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
           Padding(
-            padding: const EdgeInsets.only(left: 8,right: 8,top: 8),
+            padding: const EdgeInsets.only(left: 8, right: 8, top: 8),
             child: ClipRRect(
               borderRadius: BorderRadius.circular(18),
               child: Image.asset(
                 imagePath,
                 width: double.infinity,
-                height: 90, // 80-90 works well within 160 height
+                height: 90,
                 fit: BoxFit.cover,
               ),
             ),
@@ -363,9 +418,11 @@ class _ShopProfileState extends State<ShopProfile> {
     );
   }
 
-
-
-
-
-
+  void _openGoogleMaps(double lat, double lng) {
+    // You can implement opening Google Maps here
+    // For example, using url_launcher package:
+    // final url = 'https://www.google.com/maps/search/?api=1&query=$lat,$lng';
+    // launch(url);
+    print('Opening Google Maps for coordinates: $lat, $lng');
+  }
 }

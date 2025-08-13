@@ -1,11 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:project_sem7/uiscreen/Login.dart';
-import 'package:project_sem7/uiscreen/main_home_page.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:firebase_core/firebase_core.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'bottom_nav_bar.dart';
 
 class Profile extends StatefulWidget {
   const Profile({super.key});
@@ -18,6 +17,7 @@ class _ProfileState extends State<Profile> {
   int _selectedAvatarIndex = 0;
   bool _showAvatarSelector = false;
   String? _userEmail;
+  bool _isLoading = true; // Add loading state
 
   final _formKey = GlobalKey<FormState>();
 
@@ -38,6 +38,7 @@ class _ProfileState extends State<Profile> {
     super.initState();
     _loadSelectedAvatar();
     _fetchUserEmail();
+    _loadSignupDataFromFirestore(); // NEW: Load signup data
   }
 
   Future<void> _loadSelectedAvatar() async {
@@ -61,27 +62,130 @@ class _ProfileState extends State<Profile> {
     }
   }
 
-  void _saveProfileToFirestore() async {
+
+  Future<void> _loadSignupDataFromFirestore() async {
+    try {
+      final uid = FirebaseAuth.instance.currentUser?.uid;
+      if (uid == null) {
+        setState(() => _isLoading = false);
+        return;
+      }
+
+      // Step 1: Check OwnerSignupDetails first
+      final ownerDoc = await FirebaseFirestore.instance
+          .collection('OwnerSignupDetails')
+          .doc(uid)
+          .get();
+
+      String collectionName;
+      if (ownerDoc.exists && (ownerDoc.data()?['ownerRole'] == true)) {
+        // Owner found
+        collectionName = 'OwnerSignupDetails';
+      } else {
+        // Not owner → must be customer
+        collectionName = 'CustomerSignupDetails';
+      }
+
+      // Step 2: Fetch name & mobile from the right signup collection
+      final signupDoc = await FirebaseFirestore.instance
+          .collection(collectionName)
+          .doc(uid)
+          .get();
+
+      if (signupDoc.exists && signupDoc.data() != null) {
+        final data = signupDoc.data()!;
+        setState(() {
+          _nameController.text = data['name'] ?? '';
+          _mobilenoController.text = data['mobile'] ?? '';
+          _isLoading = false;
+        });
+      } else {
+        setState(() => _isLoading = false);
+      }
+    } catch (e) {
+      setState(() => _isLoading = false);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error loading data: $e')),
+        );
+      }
+    }
+  }
+
+
+  Future<void> _saveProfileToFirestore() async {
     if (!_formKey.currentState!.validate()) return;
 
     final uid = FirebaseAuth.instance.currentUser?.uid;
     if (uid == null) return;
 
-    final data = {
-      'name': _nameController.text.trim(),
-      'mobile': _mobilenoController.text.trim(),
-      'email': _userEmail ?? "",
-      'avatar': _avatars[_selectedAvatarIndex],
-      'timestamp': FieldValue.serverTimestamp(),
-    };
+    try {
+      // 🔹 Step 1: Determine ownerRole from signup collections
+      bool ownerRole = false;
+      final ownerDoc = await FirebaseFirestore.instance
+          .collection('OwnerSignupDetails')
+          .doc(uid)
+          .get();
 
-    await FirebaseFirestore.instance.collection('ProfileDetail').doc(uid).set(data);
+      if (ownerDoc.exists && (ownerDoc.data()?['ownerRole'] == true)) {
+        ownerRole = true;
+      }
 
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setBool('is_logged_in', true);
-    await prefs.setString('user_type', 'customer');
-    Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => const MainHomePage()));
+      // 🔹 Step 2: Save to ProfileDetail
+      final profileData = {
+        'name': _nameController.text.trim(),
+        'mobile': _mobilenoController.text.trim(),
+        'email': _userEmail ?? "",
+        'avatar': _avatars[_selectedAvatarIndex],
+        'timestamp': FieldValue.serverTimestamp(),
+        'ownerRole': ownerRole,
+      };
+
+      await FirebaseFirestore.instance
+          .collection('ProfileDetail')
+          .doc(uid)
+          .set(profileData, SetOptions(merge: true));
+
+      // 🔹 Step 3: Update correct signup collection
+      final signupCollection = ownerRole
+          ? 'OwnerSignupDetails'
+          : 'CustomerSignupDetails';
+
+      await FirebaseFirestore.instance
+          .collection(signupCollection)
+          .doc(uid)
+          .update({
+        'name': _nameController.text.trim(),
+        'mobile': _mobilenoController.text.trim(),
+        'isProfileCompleted': true,
+        'profileCompletedTimestamp': FieldValue.serverTimestamp(),
+      });
+
+      // 🔹 Step 4: Save locally
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString('userName', _nameController.text.trim());
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Profile saved successfully!')),
+        );
+
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (context) => const BottomNavBar(initialIndex: 0)),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error saving profile: $e')),
+        );
+      }
+    }
   }
+
+
+
 
   @override
   Widget build(BuildContext context) {
@@ -102,14 +206,20 @@ class _ProfileState extends State<Profile> {
             },
             icon: const Icon(Icons.arrow_back, color: Colors.black),
           ),
-          title: const Text("Profile", style: TextStyle(color: Colors.black)),
+          title: const Text("Complete Profile", style: TextStyle(color: Colors.black)),
         ),
-        body: SingleChildScrollView(
+        body: _isLoading
+            ? const Center(
+          child: CircularProgressIndicator(color: Colors.orange),
+        )
+            : SingleChildScrollView(
           child: Form(
             key: _formKey,
             child: Column(
               children: [
                 SizedBox(height: 30.h),
+
+                // Avatar Selection
                 GestureDetector(
                   onTap: () {
                     setState(() {
@@ -125,6 +235,7 @@ class _ProfileState extends State<Profile> {
                   ),
                 ),
                 SizedBox(height: 20.h),
+
                 if (_showAvatarSelector)
                   Padding(
                     padding: EdgeInsets.symmetric(horizontal: 16.w),
@@ -170,8 +281,10 @@ class _ProfileState extends State<Profile> {
                     ),
                   ),
                 SizedBox(height: 30.h),
+
                 Column(
                   children: [
+                    // Name Field (Pre-filled and editable)
                     SizedBox(
                       height: 50.h,
                       width: 320.w,
@@ -201,6 +314,8 @@ class _ProfileState extends State<Profile> {
                       ),
                     ),
                     SizedBox(height: 10.h),
+
+                    // Mobile Field (Pre-filled and editable)
                     SizedBox(
                       height: 50.h,
                       width: 320.w,
@@ -233,6 +348,8 @@ class _ProfileState extends State<Profile> {
                       ),
                     ),
                     SizedBox(height: 10.h),
+
+                    // Email Field (Read-only)
                     Container(
                       height: 50.h,
                       width: 320.w,
@@ -259,6 +376,8 @@ class _ProfileState extends State<Profile> {
                   ],
                 ),
                 SizedBox(height: 50.h),
+
+                // Continue Button
                 SizedBox(
                   height: 40.h,
                   width: 320.w,
@@ -283,5 +402,12 @@ class _ProfileState extends State<Profile> {
         ),
       ),
     );
+  }
+
+  @override
+  void dispose() {
+    _nameController.dispose();
+    _mobilenoController.dispose();
+    super.dispose();
   }
 }
