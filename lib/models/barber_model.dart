@@ -1,5 +1,3 @@
-import 'package:flutter/material.dart';
-
 class BarberModel {
   final String name;
   final String address;

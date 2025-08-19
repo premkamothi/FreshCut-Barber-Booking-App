@@ -2,14 +2,11 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
-import 'package:project_sem7/shop_profile/shop_profile.dart';
-import 'package:project_sem7/uiscreen/DashboardScreen.dart';
-import 'package:project_sem7/uiscreen/barber_card_list.dart';
-
-import 'models/barber_model.dart';
 
 class Services extends StatefulWidget {
-  const Services({super.key});
+  final String placeId;
+
+  const Services({super.key, required this.placeId});
 
   @override
   State<Services> createState() => _ServicesState();
@@ -25,45 +22,81 @@ class _ServicesState extends State<Services> {
     'Hair Spa',
   ];
 
-  late final List<BarberModel> barbers;
+  List<Map<String, dynamic>> serviceList = [];
 
-  List<Map<String, String?>> serviceList = [
-    {'service': null, 'price': null},
-  ];
+  @override
+  void initState() {
+    super.initState();
+    _loadExistingServices();
+  }
+
+  Future<void> _loadExistingServices() async {
+    try {
+      final doc = await FirebaseFirestore.instance
+          .collection('ShopProfileDetails')
+          .doc(widget.placeId)
+          .get();
+
+      if (doc.exists && doc.data()?['Services'] != null) {
+        List<dynamic> saved = doc['Services'];
+
+        Map<String, String> savedMap = {
+          for (var e in saved) e['service'] as String: e['price'] as String
+        };
+
+        setState(() {
+          serviceList = serviceOptions.map((service) {
+            final price = savedMap[service];
+            return {
+              'service': service,
+              'controller': TextEditingController(text: price),
+            };
+          }).toList();
+        });
+      } else {
+        setState(() {
+          serviceList = serviceOptions.map((service) {
+            return {
+              'service': service,
+              'controller': TextEditingController(),
+            };
+          }).toList();
+        });
+      }
+    } catch (e) {
+      print("Error loading services: $e");
+    }
+  }
 
   Future<void> saveServicesToFirestore() async {
     try {
       final user = FirebaseAuth.instance.currentUser;
+      if (user == null) return;
 
-      if (user == null) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text("User not logged in")),
-        );
-        return;
-      }
-
-      List<Map<String, String>> validServices = serviceList
-          .where((element) =>
-      (element['service'] != null && element['price'] != null))
+      List<Map<String, dynamic>> validServices = serviceList
+          .where((e) => e['controller'].text.isNotEmpty)
           .map((e) => {
-        'service': e['service']!,
-        'price': e['price']!,
+        'service': e['service'],
+        'price': e['controller'].text,
       })
           .toList();
 
       await FirebaseFirestore.instance
-          .collection('BarberShops')
-          .doc(user.uid)
+          .collection('ShopProfileDetails')
+          .doc(widget.placeId)
           .set({
+        'ownerUid': user.uid,
+        'placeId': widget.placeId,
         'Services': validServices,
+        'updatedAt': FieldValue.serverTimestamp(),
       }, SetOptions(merge: true));
 
-      Navigator.pushReplacement(
-          context, MaterialPageRoute(builder: (context) => Dashboardscreen()));
+      Navigator.pop(context);
     } catch (e) {
-      print(e.toString());
+      print("Error saving services: $e");
     }
   }
+
 
   @override
   Widget build(BuildContext context) {
@@ -81,25 +114,19 @@ class _ServicesState extends State<Services> {
         elevation: 0,
         centerTitle: true,
       ),
-
       body: Padding(
         padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 10.h),
         child: Column(
           children: [
             Expanded(
               child: ListView.builder(
-                itemCount: serviceOptions.length,
+                itemCount: serviceList.length,
                 itemBuilder: (context, index) {
-                  String serviceName = serviceOptions[index];
-
-                  if (serviceList.length <= index) {
-                    serviceList.add({'service': serviceName, 'price': null});
-                  } else {
-                    serviceList[index]['service'] = serviceName;
-                  }
+                  final serviceName = serviceList[index]['service'];
+                  final controller = serviceList[index]['controller']
+                  as TextEditingController;
 
                   IconData serviceIcon;
-
                   switch (serviceName) {
                     case 'Haircut':
                       serviceIcon = Icons.content_cut;
@@ -132,8 +159,8 @@ class _ServicesState extends State<Services> {
                     ),
                     margin: EdgeInsets.symmetric(vertical: 8.h),
                     child: Padding(
-                      padding: EdgeInsets.symmetric(
-                          horizontal: 16.w, vertical: 14.h),
+                      padding:
+                      EdgeInsets.symmetric(horizontal: 16.w, vertical: 14.h),
                       child: Row(
                         children: [
                           CircleAvatar(
@@ -155,11 +182,7 @@ class _ServicesState extends State<Services> {
                           SizedBox(
                             width: 100.w,
                             child: TextFormField(
-                              initialValue: serviceList[index]['price'],
-                              onChanged: (value) {
-                                serviceList[index]['price'] =
-                                value.isEmpty ? null : value;
-                              },
+                              controller: controller,
                               textAlign: TextAlign.center,
                               decoration: InputDecoration(
                                 hintText: "Price",
@@ -169,12 +192,12 @@ class _ServicesState extends State<Services> {
                                 contentPadding: EdgeInsets.symmetric(
                                     vertical: 10.h, horizontal: 12.w),
                                 enabledBorder: OutlineInputBorder(
-                                  borderSide: BorderSide(
-                                      color: Colors.grey.shade300),
+                                  borderSide:
+                                  BorderSide(color: Colors.grey.shade300),
                                   borderRadius: BorderRadius.circular(10.r),
                                 ),
                                 focusedBorder: OutlineInputBorder(
-                                  borderSide: BorderSide(
+                                  borderSide: const BorderSide(
                                       color: Colors.orange, width: 1.5),
                                   borderRadius: BorderRadius.circular(10.r),
                                 ),
@@ -190,28 +213,25 @@ class _ServicesState extends State<Services> {
                 },
               ),
             ),
-
             SizedBox(height: 12.h),
-
-            // Submit Button
             SizedBox(
               width: double.infinity,
               height: 50.h,
               child: ElevatedButton(
                 onPressed: saveServicesToFirestore,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.orange,
+                  elevation: 3,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(15.r),
+                  ),
+                ),
                 child: Text(
                   "Submit",
                   style: TextStyle(
                     fontSize: 16.sp,
                     fontWeight: FontWeight.bold,
                     color: Colors.white,
-                  ),
-                ),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.orange,
-                  elevation: 3,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(15.r),
                   ),
                 ),
               ),

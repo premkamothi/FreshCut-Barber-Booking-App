@@ -1,79 +1,310 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:project_sem7/Services.dart';
-import 'package:project_sem7/uiscreen/main_home_page.dart';
-import 'package:project_sem7/uiscreen/settings.dart'; // For formatting time
 
 class EditShopProfile extends StatefulWidget {
-  const EditShopProfile({super.key});
+  final String uid;
+  final String placeId;
+
+  const EditShopProfile({super.key, required this.placeId, required this.uid});
 
   @override
-  State<EditShopProfile> createState() => _EditShopProfileState();
+  State<EditShopProfile> createState() {
+    debugPrint("EditShopProfile constructor called with placeId: '$placeId'");
+    return _EditShopProfileState();
+  }
 }
 
 class _EditShopProfileState extends State<EditShopProfile> {
+
   final TextEditingController _nameController = TextEditingController();
-  final TextEditingController _numberController = TextEditingController();
+  final List<TextEditingController> _contactControllers = [
+    TextEditingController()
+  ];
   final TextEditingController _addressController = TextEditingController();
   final TextEditingController _websiteController = TextEditingController();
   final TextEditingController _aboutController = TextEditingController();
+
+  final FocusNode _aboutFocus = FocusNode();
 
   TimeOfDay? _monToFriStart;
   TimeOfDay? _monToFriEnd;
   TimeOfDay? _satToSunStart;
   TimeOfDay? _satToSunEnd;
 
+  bool _loading = true;
+  String? _currentUid;
+
+  @override
+  void initState() {
+    super.initState();
+    // Delay the fetch to ensure context is available
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _fetchShopDetails();
+    });
+  }
+
+  @override
+  void dispose() {
+    _nameController.dispose();
+    for (var controller in _contactControllers) {
+      controller.dispose();
+    }
+    _addressController.dispose();
+    _websiteController.dispose();
+    _aboutController.dispose();
+    _aboutFocus.dispose();
+    super.dispose();
+  }
+
+  Future<void> _fetchShopDetails() async {
+    try {
+      setState(() => _loading = true);
+
+      // Debug: Print the placeId to see what we're receiving
+      debugPrint("PlaceId received: '${widget.placeId}'");
+      debugPrint("PlaceId length: ${widget.placeId.length}");
+
+      // Validate placeId
+      if (widget.placeId.isEmpty) {
+        setState(() => _loading = false);
+        _showErrorAndNavigateBack("Invalid shop ID - placeId is empty");
+        return;
+      }
+
+      debugPrint("Attempting to fetch from RegisteredShops with placeId: ${widget.placeId}");
+
+      // Step 1: Fetch basic shop data from RegisteredShops using placeId
+      DocumentSnapshot registeredShopDoc = await FirebaseFirestore.instance
+          .collection('RegisteredShops')
+          .doc(widget.uid)
+          .get();
+
+      debugPrint("Document exists: ${registeredShopDoc.exists}");
+
+      if (!registeredShopDoc.exists) {
+        setState(() => _loading = false);
+        _showErrorAndNavigateBack("Shop not found in RegisteredShops collection");
+        return;
+      }
+
+      final registeredShopData = registeredShopDoc.data() as Map<String, dynamic>;
+      debugPrint("RegisteredShop data: $registeredShopData");
+
+      // Step 2: Try to fetch existing profile details from ShopProfileDetails
+      DocumentSnapshot profileDoc = await FirebaseFirestore.instance
+          .collection('ShopProfileDetails')
+          .doc(widget.placeId)
+          .get();
+
+      debugPrint("Profile document exists: ${profileDoc.exists}");
+
+      Map<String, dynamic> profileData = {};
+      if (profileDoc.exists) {
+        profileData = profileDoc.data() as Map<String, dynamic>;
+        debugPrint("Profile data: $profileData");
+      }
+
+      setState(() {
+        // Get UID from registered shop data
+        _currentUid = registeredShopData['ownerUid'] ?? widget.uid;
+
+
+        // Basic shop information from RegisteredShops - try different field names
+        _nameController.text = registeredShopData['shopName'] ?? '';
+        _addressController.text = registeredShopData['address'] ?? '';
+
+
+        // Contact numbers from RegisteredShops - try different field names
+        String phoneNumber = registeredShopData['number'] ??
+            registeredShopData['phoneNumber'] ??
+            registeredShopData['contactNumber'] ?? '';
+
+        _contactControllers.clear();
+        if (phoneNumber.isNotEmpty) {
+          _contactControllers.add(TextEditingController(text: phoneNumber));
+        } else {
+          // Try to get from array fields
+          List contactNumbers = registeredShopData['contactNumbers'] ??
+              registeredShopData['mobileNumbers'] ?? [];
+          if (contactNumbers.isNotEmpty) {
+            for (var contact in contactNumbers) {
+              _contactControllers.add(TextEditingController(text: contact.toString()));
+            }
+          } else {
+            _contactControllers.add(TextEditingController());
+          }
+        }
+
+        // Additional profile data from ShopProfileDetails (if exists)
+        _websiteController.text = profileData['websiteLink'] ?? '';
+        _aboutController.text = profileData['aboutShop'] ?? '';
+
+        // Load working hours if available
+        if (profileData['monFriStart'] != null) {
+          _monToFriStart = _parseTime(profileData['monFriStart']);
+        }
+        if (profileData['monFriEnd'] != null) {
+          _monToFriEnd = _parseTime(profileData['monFriEnd']);
+        }
+        if (profileData['satSunStart'] != null) {
+          _satToSunStart = _parseTime(profileData['satSunStart']);
+        }
+        if (profileData['satSunEnd'] != null) {
+          _satToSunEnd = _parseTime(profileData['satSunEnd']);
+        }
+
+        // Add any additional contact numbers from profile
+        List additionalContacts = profileData['additionalContactNumbers'] ?? [];
+        for (var contact in additionalContacts) {
+          _contactControllers.add(TextEditingController(text: contact));
+        }
+      });
+    } catch (e) {
+      debugPrint("Error fetching shop details: $e");
+      setState(() => _loading = false);
+      _showErrorAndNavigateBack("Error loading shop details: $e");
+    }
+
+    setState(() => _loading = false);
+  }
+
+  void _showErrorAndNavigateBack(String message) {
+    // Use addPostFrameCallback to ensure context is available
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(message),
+            backgroundColor: Colors.red,
+          ),
+        );
+        Navigator.pop(context);
+      }
+    });
+  }
+
+  TimeOfDay _parseTime(String timeStr) {
+    try {
+      final format = DateFormat.jm();
+      final dt = format.parse(timeStr);
+      return TimeOfDay.fromDateTime(dt);
+    } catch (e) {
+      debugPrint("Error parsing time: $e");
+      return TimeOfDay.now();
+    }
+  }
+
+  Future<void> _saveProfile() async {
+    if (_currentUid == null) {
+      _showSnackBar("Unable to save: User ID not found", Colors.red);
+      return;
+    }
+
+    try {
+      if (widget.placeId.isEmpty) {
+        _showSnackBar("Invalid shop ID", Colors.red);
+        return;
+      }
+
+      // Collect contacts
+      final contacts = _contactControllers
+          .map((c) => c.text.trim())
+          .where((c) => c.isNotEmpty)
+          .toList();
+
+      if (contacts.isEmpty) {
+        _showSnackBar("Please add at least one contact number", Colors.red);
+        return;
+      }
+
+      setState(() => _loading = true);
+
+      final profileData = {
+        'ownerUid': _currentUid,
+        'placeId': widget.placeId,
+        'shopName': _nameController.text.trim(),
+        'shopAddress': _addressController.text.trim(),
+        'primaryContactNumber': contacts.isNotEmpty ? contacts.first : null,
+        'additionalContactNumbers': contacts.length > 1 ? contacts.sublist(1) : [],
+        'websiteLink': _websiteController.text.trim(),
+        'aboutShop': _aboutController.text.trim(),
+        'monFriStart': _monToFriStart != null ? formatTime(_monToFriStart) : null,
+        'monFriEnd': _monToFriEnd != null ? formatTime(_monToFriEnd) : null,
+        'satSunStart': _satToSunStart != null ? formatTime(_satToSunStart) : null,
+        'satSunEnd': _satToSunEnd != null ? formatTime(_satToSunEnd) : null,
+        'updatedAt': FieldValue.serverTimestamp(),
+      };
+
+
+      final firestore = FirebaseFirestore.instance;
+      final batch = firestore.batch();
+
+      // ✅ Save full profile under ShopProfileDetails/{placeId}
+      final placeIdDoc =
+      firestore.collection('ShopProfileDetails').doc(widget.placeId);
+      batch.set(placeIdDoc, profileData, SetOptions(merge: true));
+
+      // ✅ Save full profile under ShopProfileDetails/{uid}
+      final uidDoc =
+      firestore.collection('ShopProfileDetails').doc(_currentUid);
+      batch.set(uidDoc, profileData, SetOptions(merge: true));
+
+      await batch.commit();
+
+      setState(() => _loading = false);
+
+      _showSnackBar("Shop profile updated successfully", Colors.green);
+
+      Future.delayed(const Duration(seconds: 1), () {
+        if (mounted) Navigator.pop(context);
+      });
+    } catch (e) {
+      setState(() => _loading = false);
+      debugPrint("Error saving profile: $e");
+      _showSnackBar("Error saving profile: $e", Colors.red);
+    }
+  }
+
+
+
+  void _showSnackBar(String message, Color backgroundColor) {
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(message),
+          backgroundColor: backgroundColor,
+        ),
+      );
+    }
+  }
+
   Future<void> _selectTime(BuildContext context, bool isStart, bool isWeekday) async {
+    // Remove focus & close keyboard
+    FocusScope.of(context).requestFocus(FocusNode());
+
+    // Delay to allow focus change to finish before opening picker
+    await Future.delayed(const Duration(milliseconds: 100));
+
     final picked = await showTimePicker(
       context: context,
       initialTime: TimeOfDay.now(),
-        builder: (BuildContext context, Widget? child) {
-          return Theme(
-            data: Theme.of(context).copyWith(
-              colorScheme: const ColorScheme.light(
-                primary: Colors.orange,
-                onPrimary: Colors.white,
-                onSurface: Colors.black,
-              ),
-              timePickerTheme: TimePickerThemeData(
-                backgroundColor: const Color(0xFFFFFAF2),
-                hourMinuteColor: Colors.orangeAccent,
-                hourMinuteTextColor: Colors.white,
-                dialBackgroundColor: Colors.white,
-                dialHandColor: Colors.orange,
-                dialTextColor: MaterialStateColor.resolveWith(
-                      (states) => states.contains(MaterialState.selected)
-                      ? Colors.white
-                      : Colors.black,
-                ),
-                entryModeIconColor: Colors.orange,
-
-                // 🔶 AM/PM toggle styles
-                dayPeriodColor: MaterialStateColor.resolveWith((states) {
-                  return states.contains(MaterialState.selected)
-                      ? Colors.orange
-                      : Colors.orange.withOpacity(0.2);
-                }),
-                dayPeriodTextColor: MaterialStateColor.resolveWith((states) {
-                  return states.contains(MaterialState.selected)
-                      ? Colors.white
-                      : Colors.black;
-                }),
-                dayPeriodShape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(10),
-                ),
-              ),
-              textButtonTheme: TextButtonThemeData(
-                style: TextButton.styleFrom(
-                  foregroundColor: Colors.orange,
-                ),
-              ),
+      builder: (context, child) {
+        return Theme(
+          data: Theme.of(context).copyWith(
+            colorScheme: const ColorScheme.light(
+              primary: Colors.orange,
+              onPrimary: Colors.white,
+              onSurface: Colors.black,
             ),
-            child: child!,
-          );
-        }
-
+          ),
+          child: child!,
+        );
+      },
     );
+
     if (picked != null) {
       setState(() {
         if (isWeekday) {
@@ -92,216 +323,163 @@ class _EditShopProfileState extends State<EditShopProfile> {
     return DateFormat.jm().format(dt);
   }
 
+
   @override
   Widget build(BuildContext context) {
-    final lightOrange = const Color(0xFFFFFAF2); // Very light orange
+    const lightGrey = Color(0xFFF2F2F2);
+    const mediumGreyBorder = Color(0xFFCCCCCC);
 
     return Scaffold(
       backgroundColor: Colors.white,
       appBar: AppBar(
         elevation: 0,
-        surfaceTintColor: Colors.transparent,
         backgroundColor: Colors.white,
+        surfaceTintColor: Colors.transparent,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back, color: Colors.black),
           onPressed: () {
-            Navigator.push(context, MaterialPageRoute(builder: (context) => Settings()));
+            Navigator.pop(context);
           },
         ),
-        title: const Text("Edit Shop Profile", style: TextStyle(color: Colors.black)),
+        title: const Text(
+          "Edit Shop Profile",
+          style: TextStyle(color: Colors.black),
+        ),
       ),
-      body: SingleChildScrollView(
+      body: _loading
+          ? const Center(
+        child: CircularProgressIndicator(color: Colors.orange),
+      )
+          : SingleChildScrollView(
         padding: const EdgeInsets.all(12),
         child: Column(
           children: [
-            _buildCardTextField(_nameController, "Shop Name", lightOrange),
+            // Shop Name
+            _buildCardTextField(
+              _nameController,
+              "Shop Name",
+              lightGrey,
+            ),
             const SizedBox(height: 10),
-            _buildCardTextField(_numberController, "Contact Number", lightOrange),
-            const SizedBox(height: 10),
-            _buildCardTextField(_addressController, "Shop Address", lightOrange),
-            const SizedBox(height: 10),
-            _buildCardTextField(_websiteController, "Website Link", lightOrange),
-            const SizedBox(height: 10),
-            _buildCardTextField(_aboutController, "About Your Shop", lightOrange, maxLines: 6),
 
+            // Contact Numbers (Dynamic)
+            ..._buildContactNumberFields(lightGrey),
+            const SizedBox(height: 10),
+
+            // Shop Address
+            _buildCardTextField(
+              _addressController,
+              "Shop Address",
+              lightGrey,
+              maxLines: 2,
+            ),
+            const SizedBox(height: 10),
+
+            // Website Link
+            _buildCardTextField(
+              _websiteController,
+              "Website Link (Optional)",
+              lightGrey,
+            ),
+            const SizedBox(height: 10),
+
+            // About Shop
+            _buildCardTextField(
+              _aboutController,
+              "About Your Shop (Optional)",
+              lightGrey,
+              maxLines: 6,
+              focusNode: _aboutFocus,
+            ),
             const SizedBox(height: 20),
-            _buildTimeSection("Mon - Fri", _monToFriStart, _monToFriEnd, true),
-            const SizedBox(height: 10),
-            _buildTimeSection("Sat - Sun", _satToSunStart, _satToSunEnd, false),
 
+            // Working Hours
+            _buildTimeSection(
+              "Mon - Fri",
+              _monToFriStart,
+              _monToFriEnd,
+              true,
+              lightGrey,
+              mediumGreyBorder,
+            ),
+            const SizedBox(height: 10),
+            _buildTimeSection(
+              "Sat - Sun",
+              _satToSunStart,
+              _satToSunEnd,
+              false,
+              lightGrey,
+              mediumGreyBorder,
+            ),
             const SizedBox(height: 20),
-            Align(
-              alignment: Alignment.centerLeft,
-              child: Text(
-                "Add Photos",
-                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-              ),
-            ),
-            const SizedBox(height: 10),
-            Container(
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: lightOrange,
-                borderRadius: BorderRadius.circular(20),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Wrap(
-                    spacing: 10,
-                    runSpacing: 10,
-                    children: List.generate(3, (index) {
-                      return Container(
-                        width: 100,
-                        height: 100,
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          border: Border.all(color: Colors.orange.shade200),
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        child: const Icon(Icons.image, color: Colors.orange),
-                      );
-                    }),
-                  ),
-                  const SizedBox(height: 10),
-                  OutlinedButton.icon(
-                    onPressed: () {
-                      // Logic for picking photo (future)
-                    },
-                    icon: const Icon(Icons.add_a_photo, color: Colors.orange),
-                    label: const Text(
-                      "Add Photo",
-                      style: TextStyle(color: Colors.orange),
-                    ),
-                    style: OutlinedButton.styleFrom(
-                      side: const BorderSide(color: Colors.orange),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                    ),
-                  ),
-                ],
-              ),
-            ),
 
-            const SizedBox(height: 10),
-            Align(
-              alignment: Alignment.centerLeft,
-              child: Text(
-                "Add Photos of your Specialists",
-                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+            // Manage Services
+            ListTile(
+              leading: const Icon(Icons.build, color: Colors.orange),
+              title: const Text(
+                "Manage Services",
+                style: TextStyle(fontWeight: FontWeight.w500),
               ),
-            ),
-            const SizedBox(height: 10),
-            Container(
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: lightOrange,
-                borderRadius: BorderRadius.circular(20),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Wrap(
-                    spacing: 10,
-                    runSpacing: 10,
-                    children: List.generate(3, (index) {
-                      return Container(
-                        width: 100,
-                        height: 100,
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          border: Border.all(color: Colors.orange.shade200),
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        child: const Icon(Icons.image, color: Colors.orange),
-                      );
-                    }),
+              trailing: const Icon(Icons.chevron_right, color: Colors.grey),
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => Services(placeId: widget.placeId),
                   ),
-                  const SizedBox(height: 10),
-                  OutlinedButton.icon(
-                    onPressed: () {
-                      // Logic for picking photo (future)
-                    },
-                    icon: const Icon(Icons.add_a_photo, color: Colors.orange),
-                    label: const Text(
-                      "Add Photo",
-                      style: TextStyle(color: Colors.orange),
-                    ),
-                    style: OutlinedButton.styleFrom(
-                      side: const BorderSide(color: Colors.orange),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                    ),
-                  ),
-                ],
-              ),
+                );
+              },
             ),
-
             const SizedBox(height: 20),
-            Row(
-              children: [
-                Expanded(
-                  child: ElevatedButton.icon(
-                    onPressed: () {
-                      Navigator.push(context, MaterialPageRoute(builder: (context) => Services()));
-                    },
-                    icon: const Icon(Icons.build),
-                    label: const Text("Manage Services"),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: lightOrange,
-                      foregroundColor: Colors.black,
-                      padding: const EdgeInsets.symmetric(vertical: 14), // Equal vertical padding
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: ElevatedButton.icon(
-                    onPressed: () {
-                      Navigator.push(context, MaterialPageRoute(builder: (context) => Services())); // Replace with Preview screen
-                    },
-                    icon: const Icon(Icons.preview),
-                    label: const Text("Preview"),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: lightOrange,
-                      foregroundColor: Colors.black,
-                      padding: const EdgeInsets.symmetric(vertical: 14),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-
-
-
-            const SizedBox(height: 30),
-            SizedBox(
-              width: 346,
-              child: ElevatedButton(
-                onPressed: () {
-                  // Handle update
-                },
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.orange,
-                  padding: const EdgeInsets.symmetric(horizontal: 80, vertical: 16),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-                ),
-                child: const Text(
-                  "Update",
-                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white),
-                ),
-              ),
-            ),
-            const SizedBox(height: 40),
           ],
+        ),
+      ),
+      bottomNavigationBar: SafeArea(
+        child: Container(
+          color: Colors.white,
+          padding: const EdgeInsets.all(16),
+          child: SizedBox(
+            width: double.infinity,
+            child: ElevatedButton(
+              onPressed: _loading ? null : _saveProfile,
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.orange,
+                padding: const EdgeInsets.symmetric(vertical: 16),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(20),
+                ),
+              ),
+              child: _loading
+                  ? const SizedBox(
+                height: 20,
+                width: 20,
+                child: CircularProgressIndicator(
+                  color: Colors.white,
+                  strokeWidth: 2,
+                ),
+              )
+                  : const Text(
+                "Update",
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.white,
+                ),
+              ),
+            ),
+          ),
         ),
       ),
     );
   }
 
   Widget _buildCardTextField(
-      TextEditingController controller, String hintText, Color bgColor,
-      {int maxLines = 1}) {
+      TextEditingController controller,
+      String hintText,
+      Color bgColor, {
+        int maxLines = 1,
+        FocusNode? focusNode,
+      }) {
     return Card(
       color: bgColor,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
@@ -310,6 +488,7 @@ class _EditShopProfileState extends State<EditShopProfile> {
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
         child: TextField(
           controller: controller,
+          focusNode: focusNode,
           maxLines: maxLines,
           decoration: InputDecoration(
             hintText: hintText,
@@ -320,9 +499,56 @@ class _EditShopProfileState extends State<EditShopProfile> {
     );
   }
 
-  Widget _buildTimeSection(String label, TimeOfDay? start, TimeOfDay? end, bool isWeekday) {
-    final lightOrange = const Color(0xFFFFFAF2);
+  List<Widget> _buildContactNumberFields(Color bgColor) {
+    List<Widget> fields = [];
+    for (int i = 0; i < _contactControllers.length; i++) {
+      fields.add(
+        Padding(
+          padding: const EdgeInsets.only(bottom: 10),
+          child: Row(
+            children: [
+              Expanded(
+                child: _buildCardTextField(
+                  _contactControllers[i],
+                  "Contact Number ${i + 1}",
+                  bgColor,
+                ),
+              ),
+              if (i == _contactControllers.length - 1 && _contactControllers.length < 5)
+                IconButton(
+                  icon: const Icon(Icons.add, color: Colors.orange),
+                  onPressed: () {
+                    setState(() {
+                      _contactControllers.add(TextEditingController());
+                    });
+                  },
+                ),
+              if (_contactControllers.length > 1)
+                IconButton(
+                  icon: const Icon(Icons.remove, color: Colors.red),
+                  onPressed: () {
+                    setState(() {
+                      _contactControllers[i].dispose();
+                      _contactControllers.removeAt(i);
+                    });
+                  },
+                ),
+            ],
+          ),
+        ),
+      );
+    }
+    return fields;
+  }
 
+  Widget _buildTimeSection(
+      String label,
+      TimeOfDay? start,
+      TimeOfDay? end,
+      bool isWeekday,
+      Color bgColor,
+      Color borderColor,
+      ) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -337,15 +563,17 @@ class _EditShopProfileState extends State<EditShopProfile> {
               child: OutlinedButton(
                 onPressed: () => _selectTime(context, true, isWeekday),
                 style: OutlinedButton.styleFrom(
-                  backgroundColor: lightOrange,
-                  foregroundColor: Colors.black,
-                  side: const BorderSide(color: Colors.white),
+                  backgroundColor: bgColor,
+                  side: BorderSide(color: borderColor),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(20),
                   ),
                   padding: const EdgeInsets.symmetric(vertical: 14),
                 ),
-                child: Text("Start: ${formatTime(start)}"),
+                child: Text(
+                  "Start: ${formatTime(start)}",
+                  style: const TextStyle(color: Colors.black),
+                ),
               ),
             ),
             const SizedBox(width: 10),
@@ -353,15 +581,17 @@ class _EditShopProfileState extends State<EditShopProfile> {
               child: OutlinedButton(
                 onPressed: () => _selectTime(context, false, isWeekday),
                 style: OutlinedButton.styleFrom(
-                  backgroundColor: lightOrange,
-                  foregroundColor: Colors.black,
-                  side: const BorderSide(color: Colors.white),
+                  backgroundColor: bgColor,
+                  side: BorderSide(color: borderColor),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(20),
                   ),
                   padding: const EdgeInsets.symmetric(vertical: 14),
                 ),
-                child: Text("End: ${formatTime(end)}"),
+                child: Text(
+                  "End: ${formatTime(end)}",
+                  style: const TextStyle(color: Colors.black),
+                ),
               ),
             ),
           ],
@@ -369,5 +599,4 @@ class _EditShopProfileState extends State<EditShopProfile> {
       ],
     );
   }
-
 }

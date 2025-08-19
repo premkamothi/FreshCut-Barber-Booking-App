@@ -168,10 +168,10 @@ class _ShopProfileState extends State<ShopProfile> {
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
                         _buildServiceCircle(Icons.language, "Website", () {
-                          Navigator.push(context, MaterialPageRoute(builder: (_) => const Services()));
+                          Navigator.push(context, MaterialPageRoute(builder: (_) => const Services(placeId: '',)));
                         }),
                         _buildServiceCircle(Icons.design_services, "Services", () {
-                          Navigator.push(context, MaterialPageRoute(builder: (_) => const Services()));
+                          Navigator.push(context, MaterialPageRoute(builder: (_) => const Services(placeId: '',)));
                         }),
                         _buildServiceCircle(Icons.call, "Call", () {
                           // Example: launch a phone call (use url_launcher package)
@@ -183,7 +183,7 @@ class _ShopProfileState extends State<ShopProfile> {
                           }
                         }),
                         _buildServiceCircle(Icons.info, "About Us", () {
-                          Navigator.push(context, MaterialPageRoute(builder: (_) => const Services()));
+                          Navigator.push(context, MaterialPageRoute(builder: (_) => const Services(placeId: '',)));
                         }),
                       ],
                     ),

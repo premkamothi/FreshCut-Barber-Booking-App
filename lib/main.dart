@@ -1,11 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
-import 'package:project_sem7/Services.dart';
-import 'package:project_sem7/uiscreen/DashboardScreen.dart';
 import 'package:project_sem7/uiscreen/StartingPage.dart';
 import 'package:project_sem7/uiscreen/bottom_nav_bar.dart';
-import 'package:project_sem7/uiscreen/main_home_page.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:provider/provider.dart';
 import 'package:project_sem7/providers/liked_shops_provider.dart';
@@ -16,14 +13,14 @@ void main() async {
 
   SharedPreferences prefs = await SharedPreferences.getInstance();
   bool isLoggedIn = prefs.getBool('is_logged_in') ?? false;
-  String? userType = prefs.getString('user_type');
+  String? userType = prefs.getString('user_type') ?? '';
 
   Widget initialScreen;
 
   if (!isLoggedIn) {
     initialScreen = Startingpage(); // choose owner or customer
   } else if (userType == 'owner') {
-    initialScreen = Services();
+    initialScreen = BottomNavBar(initialIndex: 0);
   } else if (userType == 'customer') {
     initialScreen = BottomNavBar(initialIndex: 0);
   } else {
@@ -41,19 +38,19 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return ScreenUtilInit(
-        designSize: Size(360, 690),
-        minTextAdapt: true,
-        splitScreenMode: true,
-        builder: (context, child) {
-          return ChangeNotifierProvider(
-            create: (_) => LikedShopsProvider(),
-            child: MaterialApp(
-              debugShowCheckedModeBanner: false,
-              home: initialScreen,
-            ),
-          );
-         },
+      designSize: Size(360, 690),
+      minTextAdapt: true,
+      splitScreenMode: true,
+      builder: (context, child) {
+        return ChangeNotifierProvider(
+          create: (_) => LikedShopsProvider(),
+          child: MaterialApp(
+            debugShowCheckedModeBanner: false,
+            home: initialScreen,
+          ),
         );
+      },
+    );
   }
 
 }
