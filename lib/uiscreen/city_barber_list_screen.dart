@@ -36,6 +36,7 @@ class _CityBarberListScreenState extends State<CityBarberListScreen> {
       List<BarberModel> barbers = (data['results'] as List).map((place) {
         return BarberModel(
           name: place['name'],
+          placeId: place['placeId'],
           address: place['formatted_address'] ?? '',
           imageUrl: place['photos'] != null
               ? 'https://maps.googleapis.com/maps/api/place/photo?maxwidth=400&photo_reference=${place['photos'][0]['photo_reference']}&key=$apiKey'

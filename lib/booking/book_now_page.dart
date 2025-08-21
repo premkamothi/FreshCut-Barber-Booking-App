@@ -15,13 +15,13 @@ class _BookNowPageState extends State<BookNowPage> {
       "name": "Haircut",
       "price": 100,
       "selected": false,
-      "image": "image2.jpg"
+      "image": "image3.jpg"
     },
     {
       "name": "Shave",
       "price": 100,
       "selected": false,
-      "image": "image3.jpg"
+      "image": "image2.jpg"
     },
     {
       "name": "Trim",

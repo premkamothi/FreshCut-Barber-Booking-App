@@ -1,8 +1,18 @@
 import 'dart:developer';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
+import 'package:geolocator/geolocator.dart';
 import 'package:project_sem7/booking/book_now_page.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../Services.dart';
+import '../booking/date_time_selection_page.dart';
 import '../models/barber_model.dart';
+import '../models/mearge_barber_model.dart';
+import '../models/shop_profile_model.dart';
+import '../uiscreen/main_home_page.dart';
+import 'dart:convert';
+import 'package:http/http.dart' as http;
+
 
 class ShopProfile extends StatefulWidget {
   final BarberModel? barberData;
@@ -18,11 +28,82 @@ class _ShopProfileState extends State<ShopProfile> {
   final orange = Colors.orangeAccent;
   final PageController _pageController = PageController();
   int _currentPage = 0;
-  final String monToFriHours = "10:00 AM - 8:00 PM";
-  final String satToSunHours = "9:00 AM - 6:00 PM";
+
+  BarberModel? _apiData; // Google Places API data
+  ShopProfileDetails? _profileData; // Firebase data
+  bool isLoading = true;
+  Position? _cachedPosition;
+
+  MergedBarber? mergedBarber;
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchShopDetails();
+    _getCurrentLocation().then((pos) {
+      setState(() {
+        _cachedPosition = pos;
+      });
+    });
+  }
+
+
+
+  Future<void> _fetchShopDetails() async {
+    try {
+      final apiBarber =
+      await GooglePlacesService().getPlaceDetails(widget.barberData!.placeId);
+
+      final doc = await FirebaseFirestore.instance
+          .collection("ShopProfileDetails")
+          .doc(widget.barberData!.placeId)
+          .get();
+
+      ShopProfileDetails? firebaseProfile;
+      if (doc.exists) {
+        firebaseProfile =
+            ShopProfileDetails.fromMap(doc.id, doc.data() as Map<String, dynamic>);
+      }
+
+      setState(() {
+        mergedBarber = MergedBarber.from(apiBarber!, firebaseProfile);
+        isLoading = false;
+      });
+    } catch (e) {
+      print("Error fetching shop details: $e");
+      setState(() => isLoading = false);
+    }
+  }
+
+  Future<Position> _getCurrentLocation() async {
+    return await Geolocator.getCurrentPosition(
+      desiredAccuracy: LocationAccuracy.high,
+    );
+  }
+
+  Future<void> _openGoogleMaps(double destLat, double destLng) async {
+    try {
+      final pos = _cachedPosition ?? await _getCurrentLocation();
+      final currentLat = pos.latitude;
+      final currentLng = pos.longitude;
+
+      final Uri googleUrl = Uri.parse(
+        "https://www.google.com/maps/dir/?api=1&origin=$currentLat,$currentLng&destination=$destLat,$destLng&travelmode=driving",
+      );
+
+      if (await canLaunchUrl(googleUrl)) {
+        await launchUrl(googleUrl, mode: LaunchMode.externalApplication);
+      }
+    } catch (e) {
+      print("Error opening maps: $e");
+    }
+  }
+
 
   @override
   Widget build(BuildContext context) {
+    final barber = _apiData ?? widget.barberData;
+
     return Scaffold(
       backgroundColor: Colors.white,
       body: Stack(
@@ -46,7 +127,7 @@ class _ShopProfileState extends State<ShopProfile> {
                             });
                           },
                           children: [
-                            _buildImageCard(widget.barberData?.imageUrl ?? 'assets/images/image1.jpg'),
+                            _buildImageCard(barber?.imageUrl ?? 'assets/images/image1.jpg'),
                             _buildImageCard('assets/images/image2.jpg'),
                             _buildImageCard('assets/images/image3.jpg'),
                           ],
@@ -79,7 +160,7 @@ class _ShopProfileState extends State<ShopProfile> {
                   Padding(
                     padding: const EdgeInsets.only(right: 12, left: 12),
                     child: Text(
-                      widget.barberData?.name ?? "The Barber",
+                      barber?.name ?? "The Barber",
                       style: const TextStyle(
                         fontSize: 24,
                         fontWeight: FontWeight.bold,
@@ -93,14 +174,17 @@ class _ShopProfileState extends State<ShopProfile> {
                   Padding(
                     padding: const EdgeInsets.only(right: 12, left: 10),
                     child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.start, // important!
                       children: [
-                        const Icon(Icons.location_on, color: Colors.orangeAccent),
+                        const Padding(
+                          padding: EdgeInsets.only(top: 2), // adjust vertical alignment a bit
+                          child: Icon(Icons.location_on, color: Colors.orangeAccent),
+                        ),
                         const SizedBox(width: 5),
                         Expanded(
                           child: Text(
-                            widget.barberData?.address ?? "123 Main Street, City",
+                            barber?.address ?? "123 Main Street, City",
                             style: TextStyle(fontSize: 16, color: Colors.grey[500]),
-                            overflow: TextOverflow.ellipsis,
                           ),
                         ),
                       ],
@@ -109,8 +193,8 @@ class _ShopProfileState extends State<ShopProfile> {
 
                   const SizedBox(height: 8),
 
-                  // Distance (only show if barberData exists)
-                  if (widget.barberData != null) ...[
+                  // Distance
+                  if (barber != null) ...[
                     Padding(
                       padding: const EdgeInsets.only(right: 12, left: 12),
                       child: Row(
@@ -118,7 +202,7 @@ class _ShopProfileState extends State<ShopProfile> {
                           const Icon(Icons.directions_walk, color: Colors.orangeAccent, size: 20),
                           const SizedBox(width: 8),
                           Text(
-                            "${widget.barberData!.distanceKm.toStringAsFixed(1)} km away",
+                            "${barber!.distanceKm.toStringAsFixed(1)} km away",
                             style: TextStyle(fontSize: 14, color: Colors.grey[500]),
                           ),
                         ],
@@ -135,20 +219,19 @@ class _ShopProfileState extends State<ShopProfile> {
                         const Icon(Icons.star, color: Colors.orangeAccent, size: 20),
                         const SizedBox(width: 8),
                         Text(
-                          "${widget.barberData?.rating ?? 5.0} (120 reviews)",
+                          "${barber?.rating ?? 5.0}",
                           style: TextStyle(fontSize: 14, color: Colors.grey[500]),
                         ),
                         const Spacer(),
-                        // Open/Closed Status (only show if barberData exists)
-                        if (widget.barberData != null)
+                        if (barber != null)
                           Container(
                             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                             decoration: BoxDecoration(
-                              color: widget.barberData!.openNow ? Colors.green : Colors.red,
+                              color: barber!.openNow ? Colors.green : Colors.red,
                               borderRadius: BorderRadius.circular(12),
                             ),
                             child: Text(
-                              widget.barberData!.openNow ? "Open Now" : "Closed",
+                              barber!.openNow ? "Open Now" : "Closed",
                               style: const TextStyle(
                                 color: Colors.white,
                                 fontSize: 12,
@@ -167,24 +250,111 @@ class _ShopProfileState extends State<ShopProfile> {
                     child: Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        _buildServiceCircle(Icons.language, "Website", () {
-                          Navigator.push(context, MaterialPageRoute(builder: (_) => const Services(placeId: '',)));
-                        }),
-                        _buildServiceCircle(Icons.design_services, "Services", () {
-                          Navigator.push(context, MaterialPageRoute(builder: (_) => const Services(placeId: '',)));
-                        }),
-                        _buildServiceCircle(Icons.call, "Call", () {
-                          // Example: launch a phone call (use url_launcher package)
-                        }),
-                        _buildServiceCircle(Icons.directions, "Direction", () {
-                          // Open Google Maps with coordinates (only if barberData exists)
-                          if (widget.barberData != null) {
-                            _openGoogleMaps(widget.barberData!.lat, widget.barberData!.lng);
+
+                        //website url launcher
+                        _buildServiceCircle(Icons.language, "Website", () async {
+                          if (mergedBarber?.website != null && mergedBarber!.website!.isNotEmpty) {
+                            final Uri url = Uri.parse(
+                              mergedBarber!.website!.startsWith("http")
+                                  ? mergedBarber!.website!
+                                  : "https://${mergedBarber!.website!}", // ensure https
+                            );
+
+                            try {
+                              await launchUrl(url, mode: LaunchMode.externalApplication);
+                            } catch (e) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(content: Text("Could not open website")),
+                              );
+                            }
+                          } else {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(content: Text("Website not available")),
+                            );
                           }
                         }),
-                        _buildServiceCircle(Icons.info, "About Us", () {
-                          Navigator.push(context, MaterialPageRoute(builder: (_) => const Services(placeId: '',)));
+
+                        //services page
+                        _buildServiceCircle(Icons.design_services, "Services", () {
+                          if (mergedBarber != null) {
+                            // Use the already available data instead of making another Firestore call
+                            _showServicesBottomSheet(context, mergedBarber!);
+                          } else {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(content: Text("Services not available")),
+                            );
+                          }
                         }),
+
+                        //shows phone numbers
+                        _buildServiceCircle(Icons.call, "Call", () {
+                          if (mergedBarber != null) {
+                            _showContactBottomSheet(context, mergedBarber!);
+                          } else {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(content: Text("Contact numbers not available")),
+                            );
+                          }
+                        }),
+
+
+                        //open google map
+                        _buildServiceCircle(Icons.directions, "Direction", () async {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(content: Text("Opening directions...")),
+                          );
+                          if (barber != null) {
+                            await _openGoogleMaps(barber!.lat, barber!.lng);
+                          }
+                        }),
+
+
+
+                        //open about us bottom sheet
+                        _buildServiceCircle(Icons.info, "About Us", () {
+                          if (mergedBarber != null) {
+                            showModalBottomSheet(
+                              context: context,
+                              shape: const RoundedRectangleBorder(
+                                borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+                              ),
+                              backgroundColor: Colors.white,
+                              builder: (context) {
+                                return Padding(
+                                  padding: const EdgeInsets.all(16),
+                                  child: Column(
+                                    mainAxisSize: MainAxisSize.min,
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Center(
+                                        child: Container(
+                                          width: 50,
+                                          height: 4,
+                                          decoration: BoxDecoration(
+                                            color: Colors.grey[300],
+                                            borderRadius: BorderRadius.circular(2),
+                                          ),
+                                        ),
+                                      ),
+                                      const SizedBox(height: 12),
+                                      Text(
+                                        "About ${mergedBarber!.name}",
+                                        style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                                      ),
+                                      const SizedBox(height: 10),
+                                      Text(
+                                        mergedBarber!.about ?? "No description available",
+                                        style: const TextStyle(fontSize: 16, color: Colors.black87),
+                                      ),
+                                      const SizedBox(height: 16),
+                                    ],
+                                  ),
+                                );
+                              },
+                            );
+                          }
+                        }),
+
                       ],
                     ),
                   ),
@@ -198,6 +368,7 @@ class _ShopProfileState extends State<ShopProfile> {
 
                   const SizedBox(height: 8),
 
+                  // Working Hours
                   Padding(
                     padding: const EdgeInsets.only(right: 12, left: 12),
                     child: Column(
@@ -208,32 +379,36 @@ class _ShopProfileState extends State<ShopProfile> {
                           style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                         ),
                         const SizedBox(height: 8),
-                        Row(
-                          children: [
-                            const Icon(Icons.calendar_today, size: 18, color: Colors.orangeAccent),
-                            const SizedBox(width: 8),
-                            Text(
-                              "Mon - Fri: $monToFriHours",
-                              style: TextStyle(fontSize: 16, color: Colors.grey[700]),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 6),
-                        Row(
-                          children: [
-                            const Icon(Icons.calendar_today, size: 18, color: Colors.orangeAccent),
-                            const SizedBox(width: 8),
-                            Text(
-                              "Sat - Sun: $satToSunHours",
-                              style: TextStyle(fontSize: 16, color: Colors.grey[700]),
-                            ),
-                          ],
-                        ),
+                        if (isLoading)
+                          const Center(child: CircularProgressIndicator())
+                        else if (mergedBarber != null) ...[
+                          Row(
+                            children: [
+                              const Icon(Icons.calendar_today, size: 18, color: Colors.orangeAccent),
+                              const SizedBox(width: 8),
+                              Text(
+                                "Mon - Fri: ${mergedBarber?.monFriStart ?? "Not Available"} - ${mergedBarber?.monFriEnd ?? "Not Available"}",
+                                style: TextStyle(fontSize: 16, color: Colors.grey[700]),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 6),
+                          Row(
+                            children: [
+                              const Icon(Icons.calendar_today, size: 18, color: Colors.orangeAccent),
+                              const SizedBox(width: 8),
+                              Text(
+                                "Sat - Sun: ${mergedBarber!.satSunStart ?? "Not Available"} - ${mergedBarber!.satSunEnd ?? "Not Available"}",
+                                style: TextStyle(fontSize: 16, color: Colors.grey[700]),
+                              ),
+                            ],
+                          ),
+                        ]
                       ],
                     ),
                   ),
 
-                  // Our Specialist title
+                  // Specialists
                   Padding(
                     padding: const EdgeInsets.only(top: 16, right: 12, left: 12),
                     child: Row(
@@ -249,7 +424,6 @@ class _ShopProfileState extends State<ShopProfile> {
 
                   const SizedBox(height: 10),
 
-                  // Horizontal scrollable small cards
                   SizedBox(
                     height: 140,
                     child: ListView(
@@ -287,9 +461,16 @@ class _ShopProfileState extends State<ShopProfile> {
                 width: double.infinity,
                 height: 50,
                 child: ElevatedButton(
-                  onPressed: () {},
+                  onPressed: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => BookNowPage(),
+                      ),
+                    );
+                  },
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.orangeAccent,
+                    backgroundColor: Colors.orange,
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(16),
                     ),
@@ -417,12 +598,208 @@ class _ShopProfileState extends State<ShopProfile> {
       ),
     );
   }
+}
 
-  void _openGoogleMaps(double lat, double lng) {
-    // You can implement opening Google Maps here
-    // For example, using url_launcher package:
-    // final url = 'https://www.google.com/maps/search/?api=1&query=$lat,$lng';
-    // launch(url);
-    print('Opening Google Maps for coordinates: $lat, $lng');
+
+
+class GooglePlacesService {
+  final String apiKey = "AIzaSyA5xVaMFV6c5rM4BCq1uVzUmXD_MxGwEZY";
+
+  /// Fetch place details by placeId
+  Future<BarberModel?> getPlaceDetails(String placeId) async {
+    final url = Uri.parse(
+      "https://maps.googleapis.com/maps/api/place/details/json?place_id=$placeId&fields=name,formatted_address,geometry,rating,opening_hours,photos&key=$apiKey",
+    );
+
+    final response = await http.get(url);
+
+    if (response.statusCode == 200) {
+      final data = json.decode(response.body);
+
+      if (data["status"] == "OK") {
+        final result = data["result"];
+
+        return BarberModel(
+          placeId: placeId,
+          name: result["name"] ?? "Unknown",
+          address: result["formatted_address"] ?? "",
+          rating: (result["rating"] ?? 0).toDouble(),
+          lat: result["geometry"]["location"]["lat"],
+          lng: result["geometry"]["location"]["lng"],
+          openNow: result["opening_hours"]?["open_now"] ?? false,
+          imageUrl: result["photos"] != null && result["photos"].isNotEmpty
+              ? "https://maps.googleapis.com/maps/api/place/photo?maxwidth=400&photoreference=${result["photos"][0]["photo_reference"]}&key=$apiKey"
+              : "",
+          distanceKm: 0.0, // You can calculate separately if needed
+        );
+      }
+    }
+    return null;
   }
 }
+
+void _showServicesBottomSheet(BuildContext context, MergedBarber mergedBarber) {
+  final services = mergedBarber.services; // Assuming services is available in MergedBarber
+
+  showModalBottomSheet(
+    backgroundColor: Colors.white,
+    context: context,
+    isScrollControlled: true,
+    shape: const RoundedRectangleBorder(
+      borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+    ),
+    builder: (context) {
+      if (services == null || services.isEmpty) {
+        return const SizedBox(
+          height: 200,
+          child: Center(child: Text("Services not available")),
+        );
+      }
+
+      return Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              height: 5,
+              width: 50,
+              margin: const EdgeInsets.only(bottom: 12),
+              decoration: BoxDecoration(
+                color: Colors.grey[400],
+                borderRadius: BorderRadius.circular(10),
+              ),
+            ),
+            const Text(
+              "Available Services",
+              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 12),
+            Flexible(
+              child: ListView.builder(
+                shrinkWrap: true,
+                itemCount: services.length,
+                itemBuilder: (context, index) {
+                  final service = services[index];
+                  final name = service["service"] ?? "Service not available";
+                  final price = service["price"] ?? "N/A";
+
+                  return Card(
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    margin: const EdgeInsets.symmetric(vertical: 6),
+                    child: ListTile(
+                      leading: Icon(_getServiceIcon(name), color: Colors.orange),
+                      title: Text(
+                        name,
+                        style: const TextStyle(fontWeight: FontWeight.w600),
+                      ),
+                      trailing: Text(
+                        "₹$price",
+                        style: const TextStyle(
+                          color: Colors.orange,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                  );
+                },
+              ),
+            ),
+          ],
+        ),
+      );
+    },
+  );
+}
+
+IconData _getServiceIcon(String serviceName) {
+  switch (serviceName) {
+    case 'Haircut':
+      return Icons.content_cut;
+    case 'Shave':
+      return Icons.face;
+    case 'Trim':
+      return Icons.cut;
+    case 'Facial':
+      return Icons.spa;
+    case 'Hair Color':
+      return Icons.color_lens;
+    case 'Hair Spa':
+      return Icons.water_drop;
+    default:
+      return Icons.build;
+  }
+}
+
+void _showContactBottomSheet(BuildContext context, MergedBarber mergedBarber) {
+  final primary = mergedBarber.primaryContactNumber;
+  final additional = mergedBarber.additionalContactNumbers ?? [];
+
+  showModalBottomSheet(
+    backgroundColor: Colors.white,
+    context: context,
+    isScrollControlled: true,
+    shape: const RoundedRectangleBorder(
+      borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+    ),
+    builder: (context) {
+      if ((primary == null || primary.isEmpty) && additional.isEmpty) {
+        return const SizedBox(
+          height: 200,
+          child: Center(child: Text("Contact numbers not available")),
+        );
+      }
+
+      return Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              height: 5,
+              width: 50,
+              margin: const EdgeInsets.only(bottom: 12),
+              decoration: BoxDecoration(
+                color: Colors.grey[400],
+                borderRadius: BorderRadius.circular(10),
+              ),
+            ),
+            const Text(
+              "Contact Numbers",
+              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 12),
+            Flexible(
+              child: ListView(
+                shrinkWrap: true,
+                children: [
+                  if (primary != null && primary.isNotEmpty)
+                    ListTile(
+                      leading: const Icon(Icons.phone, color: Colors.orange),
+                      title: Text(primary),
+                      onTap: () {
+                        launchUrl(Uri.parse("tel:$primary"));
+                      },
+                    ),
+                  ...additional.map((number) => ListTile(
+                    leading: const Icon(Icons.phone, color: Colors.orange),
+                    title: Text(number),
+                    onTap: () {
+                      launchUrl(Uri.parse("tel:$number"));
+                    },
+                  )),
+                ],
+              ),
+            ),
+          ],
+        ),
+      );
+    },
+  );
+}
+
+
+
+

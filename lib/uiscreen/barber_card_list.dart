@@ -13,6 +13,7 @@ class BarberCardList extends StatelessWidget {
   Widget build(BuildContext context) {
     final likedProvider = context.watch<LikedShopsProvider>();
 
+
     return SizedBox(
       height: 300,
       child: ListView.separated(
@@ -158,3 +159,4 @@ class BarberCardList extends StatelessWidget {
     );
   }
 }
+

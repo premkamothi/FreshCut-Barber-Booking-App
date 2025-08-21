@@ -23,8 +23,8 @@ class GooglePlacesService {
 
   Future<List<BarberModel>> getNearbyBarbers(
       double userLat, double userLng) async {
-    final url =
-        Uri.parse('https://maps.googleapis.com/maps/api/place/nearbysearch/json'
+    final url = Uri.parse(
+        'https://maps.googleapis.com/maps/api/place/nearbysearch/json'
             '?location=$userLat,$userLng'
             '&radius=10000'
             '&type=hair_care'
@@ -40,10 +40,11 @@ class GooglePlacesService {
         final lng = place['geometry']['location']['lng'];
 
         final distanceInMeters =
-            Geolocator.distanceBetween(userLat, userLng, lat, lng);
+        Geolocator.distanceBetween(userLat, userLng, lat, lng);
         final distanceKm = distanceInMeters / 1000;
 
         return BarberModel(
+          placeId: place['place_id'],
           name: place['name'],
           address: place['vicinity'] ?? '',
           imageUrl: place['photos'] != null
@@ -59,13 +60,27 @@ class GooglePlacesService {
         );
       }).toList();
 
-      // Sort by nearest distance
+      for (var barber in barbers) {
+        final docRef = FirebaseFirestore.instance
+            .collection('BarberCards')
+            .doc(barber.placeId);
+
+        final docSnapshot = await docRef.get();
+
+        if (!docSnapshot.exists) {
+          // ✅ Only create once, don’t update distance
+          await docRef.set(barber.toMap());
+        }
+      }
+
       barbers.sort((a, b) => a.distanceKm.compareTo(b.distanceKm));
       return barbers;
     } else {
       throw Exception('Failed to load places: ${data['status']}');
     }
   }
+
+
 }
 
 Future<Position> _getCurrentPosition() async {
