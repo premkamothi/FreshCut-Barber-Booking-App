@@ -1,3 +1,4 @@
+// providers/booking_provider.dart
 import 'package:flutter/material.dart';
 import '../models/mearge_barber_model.dart';
 
@@ -34,17 +35,16 @@ class BookingProvider extends ChangeNotifier {
   }
 
   void _calculateTotalPrice() {
-    _totalPrice = _selectedServices.fold(0, (sum, service) => sum + (service['price'] as int));
+    _totalPrice =
+        _selectedServices.fold(0, (sum, s) => sum + (s['price'] as int));
   }
 
-  // Check if booking is complete
   bool get isBookingComplete =>
       _barber != null &&
           _selectedServices.isNotEmpty &&
           _selectedDate != null &&
           _selectedSlot != null;
 
-  // Clear all data
   void clearBooking() {
     _barber = null;
     _selectedServices = [];
@@ -54,16 +54,18 @@ class BookingProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  // Get booking data for Firebase
+  /// 🔹 Important: initialize status as `null` (PENDING) so barber sees Accept/Decline
   Map<String, dynamic> getBookingData(String userId) {
     return {
       "userId": userId,
-      "placeId": _barber!.placeId,
+      "placeId": _barber!.placeId,          // make sure this matches your shop doc id (googlePlaceId)
       "shopName": _barber!.name,
       "shopAddress": _barber!.address,
       "services": _selectedServices,
       "totalPrice": _totalPrice,
-      "date": _selectedDate!.toIso8601String().split('T')[0], // YYYY-MM-DD format
+      "date": _selectedDate!
+          .toIso8601String()
+          .split('T')[0],                   // YYYY-MM-DD
       "slot": _selectedSlot,
       "createdAt": DateTime.now().toIso8601String(),
     };

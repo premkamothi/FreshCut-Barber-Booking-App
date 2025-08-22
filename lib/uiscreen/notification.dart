@@ -11,7 +11,6 @@ class Notifications extends StatefulWidget {
 
 class _NotificationsState extends State<Notifications> {
   final firestore = FirebaseFirestore.instance;
-  late String shopPlaceId;
 
   // Track bookings that have been acted upon in this session
   final Set<String> processedBookings = {};
@@ -28,23 +27,17 @@ class _NotificationsState extends State<Notifications> {
     return data?['googlePlaceId'] as String?;
   }
 
+  /// Update booking status → accept / decline
   void _updateBookingStatus(
       Map<String, dynamic> booking, bool accepted, String bookingId) async {
-    // Prevent decline if already accepted
-    if (booking['status'] == true && !accepted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Booking already accepted, cannot decline")),
-      );
-      return;
-    }
 
-    final barberDocRef = firestore.collection("BookedSlots").doc(shopPlaceId);
+    final barberDocRef = firestore.collection("BookedSlots").doc(booking['placeId']);
     final userDocRef =
     firestore.collection("BookedSlots").doc(booking['userId']);
 
     final updatedBooking = {
       ...booking,
-      "status": accepted,
+      "selected_status": accepted, // true = accepted, false = declined
     };
 
     // Update barber's bookings
@@ -78,14 +71,89 @@ class _NotificationsState extends State<Notifications> {
       }
     }
 
-    // Mark as processed to disable buttons
     setState(() {
       processedBookings.add(bookingId);
     });
 
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-          content: Text(accepted ? "Booking accepted" : "Booking declined")),
+          content:
+          Text(accepted ? "Booking accepted" : "Booking declined")),
+    );
+  }
+
+  /// Update arrival status → store in Customer_visited only if arrived == true
+  void _updateArrivalStatus(
+      Map<String, dynamic> booking, bool arrived, String bookingId) async {
+
+    final barberDocRef = firestore.collection("BookedSlots").doc(booking['placeId']);
+    final userDocRef =
+    firestore.collection("BookedSlots").doc(booking['userId']);
+
+    final updatedBooking = {
+      ...booking,
+      "arrived": arrived, // true = visited, false = not on time
+    };
+
+    // Update barber's bookings
+    await barberDocRef.update({
+      "bookings": FieldValue.arrayRemove([booking]),
+    });
+    await barberDocRef.update({
+      "bookings": FieldValue.arrayUnion([updatedBooking]),
+    });
+
+    // Update user's bookings
+    final userData = await userDocRef.get();
+    if (userData.exists) {
+      final userBookings =
+      (userData.data()!['bookings'] as List<dynamic>? ?? []);
+      final oldBooking = userBookings.firstWhere(
+            (b) =>
+        b['slot'] == booking['slot'] &&
+            b['placeId'] == booking['placeId'] &&
+            b['date'] == booking['date'],
+        orElse: () => null,
+      );
+
+      if (oldBooking != null) {
+        await userDocRef.update({
+          "bookings": FieldValue.arrayRemove([oldBooking]),
+        });
+        await userDocRef.update({
+          "bookings": FieldValue.arrayUnion([updatedBooking]),
+        });
+      }
+    }
+
+    // Only store in Customer_visited if arrived == true
+    if (arrived) {
+      final placeId = booking['placeId'];
+      final shopVisitedRef = firestore.collection("Customer_visited").doc(placeId);
+
+      final visitData = {
+        "customerId": booking['userId'],
+        "customerName": booking['user']?['name'] ?? "",
+        "customerMobile": booking['user']?['mobile'] ?? "",
+        "booking": updatedBooking,
+        "timestamp": FieldValue.serverTimestamp(),
+      };
+
+      await shopVisitedRef.set({
+        "shopId": placeId,
+        "visitedBookings": FieldValue.arrayUnion([visitData])
+      }, SetOptions(merge: true)); // merge ensures multiple entries are appended
+    }
+
+    setState(() {
+      processedBookings.add(bookingId);
+    });
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+          content: Text(arrived
+              ? "Customer has been visited ✅"
+              : "Customer not on time ❌")),
     );
   }
 
@@ -103,7 +171,7 @@ class _NotificationsState extends State<Notifications> {
             return const Center(child: Text("No shop registered for this user"));
           }
 
-          shopPlaceId = snapshot.data!;
+          final shopPlaceId = snapshot.data!;
           return StreamBuilder<DocumentSnapshot>(
             stream: firestore
                 .collection("BookedSlots")
@@ -135,9 +203,13 @@ class _NotificationsState extends State<Notifications> {
                   final profile = booking['user'] as Map<String, dynamic>? ?? {};
                   final services = booking['services'] as List<dynamic>? ?? [];
 
-                  // Disable buttons ONLY if clicked in this session
-                  final buttonsDisabled =
-                  processedBookings.contains(bookingId);
+                  final bool? selectedStatus =
+                  booking['selected_status']; // null, true, or false
+                  final bool? arrived = booking['arrived'];
+
+                  final showAcceptDeclineButtons =
+                      !processedBookings.contains(bookingId) &&
+                          selectedStatus == null;
 
                   return Card(
                     margin: const EdgeInsets.only(bottom: 16),
@@ -149,7 +221,6 @@ class _NotificationsState extends State<Notifications> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          // Avatar + Profile
                           Row(
                             children: [
                               CircleAvatar(
@@ -157,7 +228,8 @@ class _NotificationsState extends State<Notifications> {
                                 backgroundImage: profile['avatar'] != null
                                     ? NetworkImage(profile['avatar'])
                                     : const AssetImage(
-                                    "assets/images/avatar1.png") as ImageProvider,
+                                    "assets/images/avatar1.png")
+                                as ImageProvider,
                               ),
                               const SizedBox(width: 12),
                               Column(
@@ -168,18 +240,14 @@ class _NotificationsState extends State<Notifications> {
                                           fontWeight: FontWeight.bold,
                                           fontSize: 16)),
                                   Text(profile['mobile'] ?? "No Phone",
-                                      style:
-                                      const TextStyle(color: Colors.grey)),
+                                      style: const TextStyle(color: Colors.grey)),
                                   Text(profile['email'] ?? "No Email",
-                                      style:
-                                      const TextStyle(color: Colors.grey)),
+                                      style: const TextStyle(color: Colors.grey)),
                                 ],
                               ),
                             ],
                           ),
                           const SizedBox(height: 12),
-
-                          // Slot & Date
                           Row(
                             children: [
                               const Icon(Icons.access_time,
@@ -198,8 +266,6 @@ class _NotificationsState extends State<Notifications> {
                             ],
                           ),
                           const SizedBox(height: 8),
-
-                          // Services
                           Wrap(
                             spacing: 8,
                             runSpacing: 4,
@@ -217,58 +283,103 @@ class _NotificationsState extends State<Notifications> {
                             }).toList(),
                           ),
                           const SizedBox(height: 8),
-
-                          // Total Price
                           Text("Total: ₹${booking['totalPrice'] ?? 0}",
                               style: const TextStyle(fontWeight: FontWeight.bold)),
                           const SizedBox(height: 16),
 
-                          // Accept/Decline buttons
-                          Row(
-                            children: [
-                              Expanded(
-                                child: ElevatedButton(
-                                  style: ElevatedButton.styleFrom(
-                                    backgroundColor: buttonsDisabled
-                                        ? Colors.grey
-                                        : Colors.green,
-                                    padding: const EdgeInsets.symmetric(
-                                        vertical: 14),
-                                    shape: RoundedRectangleBorder(
-                                      borderRadius: BorderRadius.circular(12),
+                          // Action Buttons / Status
+                          if (showAcceptDeclineButtons) ...[
+                            Row(
+                              children: [
+                                Expanded(
+                                  child: ElevatedButton(
+                                    style: ElevatedButton.styleFrom(
+                                      backgroundColor: Colors.green,
+                                      padding: const EdgeInsets.symmetric(
+                                          vertical: 14),
+                                      shape: RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.circular(12),
+                                      ),
                                     ),
+                                    onPressed: () => _updateBookingStatus(
+                                        booking, true, bookingId),
+                                    child: const Text("Accept",
+                                        style: TextStyle(fontSize: 16)),
                                   ),
-                                  onPressed: buttonsDisabled
-                                      ? null
-                                      : () => _updateBookingStatus(
-                                      booking, true, bookingId),
-                                  child: const Text("Accept",
-                                      style: TextStyle(fontSize: 16)),
                                 ),
-                              ),
-                              const SizedBox(width: 12),
-                              Expanded(
-                                child: ElevatedButton(
-                                  style: ElevatedButton.styleFrom(
-                                    backgroundColor: buttonsDisabled
-                                        ? Colors.grey
-                                        : Colors.red,
-                                    padding: const EdgeInsets.symmetric(
-                                        vertical: 14),
-                                    shape: RoundedRectangleBorder(
-                                      borderRadius: BorderRadius.circular(12),
+                                const SizedBox(width: 12),
+                                Expanded(
+                                  child: ElevatedButton(
+                                    style: ElevatedButton.styleFrom(
+                                      backgroundColor: Colors.red,
+                                      padding: const EdgeInsets.symmetric(
+                                          vertical: 14),
+                                      shape: RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.circular(12),
+                                      ),
                                     ),
+                                    onPressed: () => _updateBookingStatus(
+                                        booking, false, bookingId),
+                                    child: const Text("Decline",
+                                        style: TextStyle(fontSize: 16)),
                                   ),
-                                  onPressed: buttonsDisabled
-                                      ? null
-                                      : () => _updateBookingStatus(
-                                      booking, false, bookingId),
-                                  child: const Text("Decline",
-                                      style: TextStyle(fontSize: 16)),
                                 ),
-                              ),
-                            ],
-                          ),
+                              ],
+                            ),
+                          ] else if (selectedStatus == false) ...[
+                            const Text("Request Declined ❌",
+                                style: TextStyle(
+                                    color: Colors.red,
+                                    fontWeight: FontWeight.bold)),
+                          ] else if (selectedStatus == true && arrived == null) ...[
+                            Row(
+                              children: [
+                                Expanded(
+                                  child: ElevatedButton(
+                                    style: ElevatedButton.styleFrom(
+                                      backgroundColor: Colors.blue,
+                                      padding: const EdgeInsets.symmetric(
+                                          vertical: 14),
+                                      shape: RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.circular(12),
+                                      ),
+                                    ),
+                                    onPressed: () => _updateArrivalStatus(
+                                        booking, true, bookingId),
+                                    child: const Text("Customer visited",
+                                        style: TextStyle(fontSize: 16)),
+                                  ),
+                                ),
+                                const SizedBox(width: 12),
+                                Expanded(
+                                  child: ElevatedButton(
+                                    style: ElevatedButton.styleFrom(
+                                      backgroundColor: Colors.orange,
+                                      padding: const EdgeInsets.symmetric(
+                                          vertical: 14),
+                                      shape: RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.circular(12),
+                                      ),
+                                    ),
+                                    onPressed: () => _updateArrivalStatus(
+                                        booking, false, bookingId),
+                                    child: const Text("Not on time",
+                                        style: TextStyle(fontSize: 16)),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ] else if (selectedStatus == true && arrived != null) ...[
+                            Text(
+                              arrived
+                                  ? "Customer has been visited ✅"
+                                  : "Customer not on time ❌",
+                              style: TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 16,
+                                  color: arrived ? Colors.green : Colors.red),
+                            ),
+                          ],
                         ],
                       ),
                     ),
