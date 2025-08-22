@@ -6,6 +6,7 @@ import 'package:project_sem7/uiscreen/bottom_nav_bar.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:provider/provider.dart';
 import 'package:project_sem7/providers/liked_shops_provider.dart';
+import 'package:project_sem7/providers/booking_provider.dart'; // Add this import
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -42,8 +43,11 @@ class MyApp extends StatelessWidget {
       minTextAdapt: true,
       splitScreenMode: true,
       builder: (context, child) {
-        return ChangeNotifierProvider(
-          create: (_) => LikedShopsProvider(),
+        return MultiProvider( // Changed from ChangeNotifierProvider to MultiProvider
+          providers: [
+            ChangeNotifierProvider(create: (_) => LikedShopsProvider()), // Your existing provider
+            ChangeNotifierProvider(create: (_) => BookingProvider()),     // Added BookingProvider
+          ],
           child: MaterialApp(
             debugShowCheckedModeBanner: false,
             home: initialScreen,
@@ -52,5 +56,4 @@ class MyApp extends StatelessWidget {
       },
     );
   }
-
 }

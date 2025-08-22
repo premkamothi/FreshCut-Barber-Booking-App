@@ -1,4 +1,9 @@
+import 'dart:convert';
+import 'dart:io';
+import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:http/http.dart' as http;
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:intl/intl.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -37,6 +42,13 @@ class _EditShopProfileState extends State<EditShopProfile> {
   bool _loading = true;
   String? _currentUid;
 
+  final ImagePicker _picker = ImagePicker();
+  List<XFile> selectedImages = [];
+  List<String> _shopImages = [];
+
+  final String imageKitUploadUrl = 'https://upload.imagekit.io/api/v1/files/upload';
+  final String imageKitPrivateKey = 'private_pWr6GTcSorJB7LBrowYhFUndHG0=';
+
   @override
   void initState() {
     super.initState();
@@ -44,6 +56,34 @@ class _EditShopProfileState extends State<EditShopProfile> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _fetchShopDetails();
     });
+  }
+
+  Future<List<String>> uploadImagesToImageKit() async {
+    List<String> uploadedUrls = [];
+    for (XFile image in selectedImages) {
+      File file = File(image.path);
+      var request = http.MultipartRequest('POST', Uri.parse(imageKitUploadUrl));
+      request.headers['Authorization'] =
+      'Basic ${base64Encode(utf8.encode('$imageKitPrivateKey:'))}';
+      request.fields['fileName'] = file.path.split('/').last;
+      request.fields['useUniqueFileName'] = 'true';
+      request.files.add(await http.MultipartFile.fromPath('file', file.path));
+
+      try {
+        final response = await request.send();
+        final responseData = await response.stream.bytesToString();
+        final decoded = json.decode(responseData);
+
+        if (response.statusCode == 200) {
+          uploadedUrls.add(decoded['url']);
+        } else {
+          debugPrint("Upload failed: ${decoded['message']}");
+        }
+      } catch (e) {
+        debugPrint("ImageKit upload error: $e");
+      }
+    }
+    return uploadedUrls;
   }
 
   @override
@@ -156,6 +196,8 @@ class _EditShopProfileState extends State<EditShopProfile> {
           _satToSunEnd = _parseTime(profileData['satSunEnd']);
         }
 
+        _shopImages = List<String>.from(profileData['Images'] ?? []);
+
         // Add any additional contact numbers from profile
         List additionalContacts = profileData['additionalContactNumbers'] ?? [];
         for (var contact in additionalContacts) {
@@ -222,6 +264,9 @@ class _EditShopProfileState extends State<EditShopProfile> {
 
       setState(() => _loading = true);
 
+      // Upload any new images added in this session
+      final imageUrls = await uploadImagesToImageKit();
+
       final profileData = {
         'ownerUid': _currentUid,
         'placeId': widget.placeId,
@@ -235,9 +280,10 @@ class _EditShopProfileState extends State<EditShopProfile> {
         'monFriEnd': _monToFriEnd != null ? formatTime(_monToFriEnd) : null,
         'satSunStart': _satToSunStart != null ? formatTime(_satToSunStart) : null,
         'satSunEnd': _satToSunEnd != null ? formatTime(_satToSunEnd) : null,
+        // Images field is only for profile gallery images, shopPhotos/specialistPhotos are migrated separately
+        'Images': imageUrls,
         'updatedAt': FieldValue.serverTimestamp(),
       };
-
 
       final firestore = FirebaseFirestore.instance;
       final batch = firestore.batch();
@@ -254,6 +300,10 @@ class _EditShopProfileState extends State<EditShopProfile> {
 
       await batch.commit();
 
+      // ✅ After saving profile, migrate images from RegisteredShops → ShopProfileDetails
+      await _migrateImagesToShopProfileDetails(_currentUid!, widget.placeId, true);  // specialistPhotos
+      await _migrateImagesToShopProfileDetails(_currentUid!, widget.placeId, false); // shopPhotos
+
       setState(() => _loading = false);
 
       _showSnackBar("Shop profile updated successfully", Colors.green);
@@ -267,6 +317,7 @@ class _EditShopProfileState extends State<EditShopProfile> {
       _showSnackBar("Error saving profile: $e", Colors.red);
     }
   }
+
 
 
 
@@ -411,8 +462,10 @@ class _EditShopProfileState extends State<EditShopProfile> {
               lightGrey,
               mediumGreyBorder,
             ),
+            SizedBox(height: 10),
+            _buildPhotoSection("Add Photos", lightGrey, mediumGreyBorder, false),
+            _buildPhotoSection("Add Photos of your Specialists", lightGrey, mediumGreyBorder,true),
             const SizedBox(height: 20),
-
             // Manage Services
             ListTile(
               leading: const Icon(Icons.build, color: Colors.orange),
@@ -472,6 +525,7 @@ class _EditShopProfileState extends State<EditShopProfile> {
       ),
     );
   }
+
 
   Widget _buildCardTextField(
       TextEditingController controller,
@@ -599,4 +653,255 @@ class _EditShopProfileState extends State<EditShopProfile> {
       ],
     );
   }
+
+  Widget _buildPhotoSection(
+      String title, Color bgColor, Color borderColor, bool isSpecialist) {
+    final uid = FirebaseAuth.instance.currentUser?.uid;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(title,
+            style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+        const SizedBox(height: 10),
+
+        /// ✅ Listen to both ShopProfileDetails and RegisteredShops
+        StreamBuilder<DocumentSnapshot>(
+          stream: FirebaseFirestore.instance
+              .collection('ShopProfileDetails')
+              .doc(uid)
+              .snapshots(),
+          builder: (context, snapshot) {
+            final shopDetailsExists = snapshot.hasData && snapshot.data!.exists;
+            final shopDetailsData =
+                snapshot.data?.data() as Map<String, dynamic>? ?? {};
+
+            return StreamBuilder<DocumentSnapshot>(
+              stream: FirebaseFirestore.instance
+                  .collection('RegisteredShops')
+                  .doc(uid)
+                  .snapshots(),
+              builder: (context, regSnap) {
+                final registeredData =
+                    regSnap.data?.data() as Map<String, dynamic>? ?? {};
+
+                // ✅ Use ShopProfileDetails images if doc exists, else fallback to RegisteredShops
+                final images = List<String>.from(
+                  shopDetailsExists
+                      ? shopDetailsData[isSpecialist
+                      ? 'specialistPhotos'
+                      : 'shopPhotos'] ??
+                      []
+                      : registeredData[isSpecialist
+                      ? 'specialistPhotos'
+                      : 'shopPhotos'] ??
+                      [],
+                );
+
+                final placeId = shopDetailsData['placeId'] ?? "";
+
+                return SizedBox(
+                  height: 110,
+                  child: ListView.builder(
+                    scrollDirection: Axis.horizontal,
+                    itemCount: images.length + 1,
+                    itemBuilder: (context, index) {
+                      if (index == images.length) {
+                        // ➕ Add new photo container
+                        return GestureDetector(
+                          onTap: () async {
+                            final picked =
+                            await _picker.pickImage(source: ImageSource.gallery);
+                            if (picked != null) {
+                              File file = File(picked.path);
+                              var request = http.MultipartRequest(
+                                  'POST', Uri.parse(imageKitUploadUrl));
+                              request.headers['Authorization'] =
+                              'Basic ${base64Encode(utf8.encode('$imageKitPrivateKey:'))}';
+                              request.fields['fileName'] =
+                                  file.path.split('/').last;
+                              request.fields['useUniqueFileName'] = 'true';
+                              request.files.add(await http.MultipartFile.fromPath(
+                                  'file', file.path));
+
+                              try {
+                                final response = await request.send();
+                                final responseData =
+                                await response.stream.bytesToString();
+                                final decoded = json.decode(responseData);
+
+                                if (response.statusCode == 200) {
+                                  final newUrl = decoded['url'];
+                                  final fieldName = isSpecialist
+                                      ? 'specialistPhotos'
+                                      : 'shopPhotos';
+
+                                  final updateData = {
+                                    fieldName: FieldValue.arrayUnion([newUrl]),
+                                  };
+
+                                  if (shopDetailsExists) {
+                                    // ✅ Save under ShopProfileDetails
+                                    await FirebaseFirestore.instance
+                                        .collection('ShopProfileDetails')
+                                        .doc(uid)
+                                        .set(updateData, SetOptions(merge: true));
+
+                                    if (placeId.isNotEmpty) {
+                                      await FirebaseFirestore.instance
+                                          .collection('ShopProfileDetails')
+                                          .doc(placeId)
+                                          .set(updateData, SetOptions(merge: true));
+                                    }
+                                  } else {
+                                    // ✅ Save under RegisteredShops if profile not built yet
+                                    await FirebaseFirestore.instance
+                                        .collection('RegisteredShops')
+                                        .doc(uid)
+                                        .set(updateData, SetOptions(merge: true));
+                                  }
+                                }
+                              } catch (e) {
+                                debugPrint("Upload error: $e");
+                              }
+                            }
+                          },
+                          child: Container(
+                            width: 100,
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              border: Border.all(color: borderColor),
+                              borderRadius: BorderRadius.circular(16),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Colors.black.withOpacity(0.05),
+                                  blurRadius: 4,
+                                  offset: const Offset(0, 2),
+                                )
+                              ],
+                            ),
+                            child: const Center(
+                              child: Icon(Icons.add_a_photo,
+                                  color: Colors.orange, size: 28),
+                            ),
+                          ),
+                        );
+                      }
+
+                      // 🖼 Existing uploaded image with ❌ remove button
+                      return Padding(
+                        padding: const EdgeInsets.only(right: 12),
+                        child: Stack(
+                          children: [
+                            Container(
+                              width: 100,
+                              decoration: BoxDecoration(
+                                borderRadius: BorderRadius.circular(16),
+                                image: DecorationImage(
+                                  image: NetworkImage(images[index]),
+                                  fit: BoxFit.cover,
+                                ),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: Colors.black.withOpacity(0.05),
+                                    blurRadius: 4,
+                                    offset: const Offset(0, 2),
+                                  )
+                                ],
+                              ),
+                            ),
+                            Positioned(
+                              top: 4,
+                              right: 4,
+                              child: GestureDetector(
+                                onTap: () async {
+                                  final fieldName = isSpecialist
+                                      ? 'specialistPhotos'
+                                      : 'shopPhotos';
+
+                                  if (shopDetailsExists) {
+                                    // remove from ShopProfileDetails
+                                    await FirebaseFirestore.instance
+                                        .collection('ShopProfileDetails')
+                                        .doc(uid)
+                                        .update({
+                                      fieldName:
+                                      FieldValue.arrayRemove([images[index]])
+                                    });
+
+                                    if (placeId.isNotEmpty) {
+                                      await FirebaseFirestore.instance
+                                          .collection('ShopProfileDetails')
+                                          .doc(placeId)
+                                          .update({
+                                        fieldName: FieldValue.arrayRemove(
+                                            [images[index]])
+                                      });
+                                    }
+                                  } else {
+                                    // remove from RegisteredShops
+                                    await FirebaseFirestore.instance
+                                        .collection('RegisteredShops')
+                                        .doc(uid)
+                                        .update({
+                                      fieldName:
+                                      FieldValue.arrayRemove([images[index]])
+                                    });
+                                  }
+                                },
+                                child: Container(
+                                  padding: const EdgeInsets.all(4),
+                                  decoration: const BoxDecoration(
+                                    shape: BoxShape.circle,
+                                    color: Colors.black54,
+                                  ),
+                                  child: const Icon(Icons.close,
+                                      size: 16, color: Colors.white),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      );
+                    },
+                  ),
+                );
+              },
+            );
+          },
+        ),
+      ],
+    );
+  }
+
+  Future<void> _migrateImagesToShopProfileDetails(String uid, String placeId, bool isSpecialist) async {
+    final regDoc = await FirebaseFirestore.instance
+        .collection('RegisteredShops')
+        .doc(uid)
+        .get();
+
+    if (regDoc.exists) {
+      final registeredData = regDoc.data() ?? {};
+      final fieldName = isSpecialist ? 'specialistPhotos' : 'shopPhotos';
+      final images = List<String>.from(registeredData[fieldName] ?? []);
+
+      if (images.isNotEmpty) {
+        final updateData = {fieldName: images};
+
+        // ✅ Create ShopProfileDetails with the existing RegisteredShops images
+        await FirebaseFirestore.instance
+            .collection('ShopProfileDetails')
+            .doc(uid)
+            .set(updateData, SetOptions(merge: true));
+
+        if (placeId.isNotEmpty) {
+          await FirebaseFirestore.instance
+              .collection('ShopProfileDetails')
+              .doc(placeId)
+              .set(updateData, SetOptions(merge: true));
+        }
+      }
+    }
+  }
+
 }

@@ -18,6 +18,7 @@ class MergedBarber {
   final String? website;
   final String? phone;
   final String? monFriStart;
+  final List<String>? shopPhotos;
   final String? monFriEnd;
   final String? satSunStart;
   final String? satSunEnd;
@@ -30,6 +31,7 @@ class MergedBarber {
     required this.name,
     required this.address,
     required this.imageUrl,
+    required this.shopPhotos,
     required this.distanceKm,
     required this.rating,
     required this.lat,
@@ -60,6 +62,7 @@ class MergedBarber {
       lng: api.lng,
       openNow: api.openNow,
       about: fb?.about,
+      shopPhotos: fb?.shopPhotos,
       website: fb?.website,
       phone: fb?.phoneNumber,
       monFriStart: fb?.monFriStart,

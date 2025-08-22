@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/liked_shops_provider.dart';
+import 'bottom_nav_bar.dart';
 
 class LikedShops extends StatefulWidget {
   const LikedShops({super.key});
@@ -21,10 +22,24 @@ class _LikedShopsState extends State<LikedShops> {
     return Scaffold(
       backgroundColor: Colors.white,
       appBar: AppBar(
-        title: const Text("Liked Shops"),
-        backgroundColor: Colors.white,
-        surfaceTintColor: Colors.transparent,
         elevation: 0,
+        surfaceTintColor: Colors.transparent,
+        backgroundColor: Colors.white,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back, color: Colors.black),
+          onPressed: () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                  builder: (_) => const BottomNavBar(initialIndex: 0)),
+            );
+          },
+        ),
+        title: const Text(
+          "Licked Shops",
+          style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold),
+        ),
+        centerTitle: true,
       ),
       body: likedShops.isEmpty
           ? const Center(child: Text('No liked shops'))

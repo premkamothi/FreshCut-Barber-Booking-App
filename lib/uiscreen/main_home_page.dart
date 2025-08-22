@@ -10,6 +10,7 @@ import '../widgets/custom_search_bar.dart';
 import 'barber_card_list.dart';
 import 'package:geolocator/geolocator.dart';
 import 'city_barber_list_screen.dart';
+import 'notification.dart';
 
 class MainHomePage extends StatefulWidget {
   const MainHomePage({super.key});
@@ -216,7 +217,7 @@ class _MainHomePageState extends State<MainHomePage> {
     super.initState();
     _barberFuture = _getCurrentPosition()
         .then((position) => GooglePlacesService()
-            .getNearbyBarbers(position.latitude, position.longitude))
+        .getNearbyBarbers(position.latitude, position.longitude))
         .catchError((e) {
       print('Location error: $e');
       return <BarberModel>[];
@@ -254,7 +255,7 @@ class _MainHomePageState extends State<MainHomePage> {
                 IconButton(
                   onPressed: () {
                     Navigator.push(context,
-                        MaterialPageRoute(builder: (context) => ShopProfile(barberData: null,)));
+                        MaterialPageRoute(builder: (context) => Notifications()));
                   },
                   icon: const Icon(Icons.notifications_active_outlined),
                 ),

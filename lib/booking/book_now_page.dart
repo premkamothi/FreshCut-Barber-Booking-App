@@ -1,53 +1,189 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
-import 'date_time_selection_page.dart';
+import 'package:provider/provider.dart';
+import 'package:table_calendar/table_calendar.dart';
+import 'package:intl/intl.dart';
+import '../models/mearge_barber_model.dart';
+import '../providers/booking_provider.dart';
+import 'review_summary.dart';
 
 class BookNowPage extends StatefulWidget {
-  const BookNowPage({super.key});
+  final MergedBarber barber;
+
+  const BookNowPage({super.key, required this.barber});
 
   @override
   State<BookNowPage> createState() => _BookNowPageState();
 }
 
 class _BookNowPageState extends State<BookNowPage> {
-  final List<Map<String, dynamic>> services = [
-    {
-      "name": "Haircut",
-      "price": 100,
-      "selected": false,
-      "image": "image3.jpg"
-    },
-    {
-      "name": "Shave",
-      "price": 100,
-      "selected": false,
-      "image": "image2.jpg"
-    },
-    {
-      "name": "Trim",
-      "price": 150,
-      "selected": false,
-      "image": "image1.jpg"
-    },
-    {
-      "name": "Facial",
-      "price": 200,
-      "selected": false,
-      "image": "image2.jpg"
-    },
-    {
-      "name": "Hair Spa",
-      "price": 300,
-      "selected": false,
-      "image": "image3.jpg"
-    },
-  ];
+  late List<Map<String, dynamic>> services;
+  DateTime _focusedDay = DateTime.now();
+  DateTime? _selectedDay;
+  int selectedTimeIndex = -1;
+  List<String> timeSlots = [];
+
+  late String? monFriStart;
+  late String? monFriEnd;
+  late String? satSunStart;
+  late String? satSunEnd;
 
   String _getImagePath(String? fileName) {
     if (fileName == null || fileName.isEmpty) {
       return "assets/images/image1.jpg";
     }
     return "assets/images/$fileName";
+  }
+
+  String _mapServiceToImage(String name) {
+    switch (name.toLowerCase()) {
+      case "haircut":
+        return "image3.jpg";
+      case "shave":
+        return "image2.jpg";
+      case "trim":
+        return "image5.jpeg";
+      case "facial":
+        return "image4.jpg";
+      case "hair spa":
+        return "image6.jpeg";
+      default:
+        return "image1.jpg";
+    }
+  }
+
+  @override
+  void initState() {
+    super.initState();
+
+    // Initialize services
+    final rawServices = widget.barber.services ?? [];
+    services = rawServices.map((s) {
+      final serviceName = s["service"] ?? "";
+      return {
+        "name": serviceName,
+        "price": int.tryParse(s["price"]?.toString() ?? "0") ?? 0,
+        "selected": false,
+        "image": _mapServiceToImage(serviceName),
+      };
+    }).toList();
+
+    // Initialize barber working hours
+    monFriStart = widget.barber.monFriStart;
+    monFriEnd = widget.barber.monFriEnd;
+    satSunStart = widget.barber.satSunStart;
+    satSunEnd = widget.barber.satSunEnd;
+
+    // Set barber in provider
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      context.read<BookingProvider>().setBarber(widget.barber);
+    });
+  }
+
+  TimeOfDay _parseTime(String time) {
+    final df = DateFormat.jm(); // "h:mm a"
+    final dt = df.parse(time);
+    return TimeOfDay.fromDateTime(dt);
+  }
+
+  void _generateTimeSlots(DateTime day, {bool fallback = true}) {
+    List<String> slots = [];
+
+    bool isWeekend = (day.weekday == DateTime.saturday || day.weekday == DateTime.sunday);
+    String? startStr = isWeekend ? satSunStart : monFriStart;
+    String? endStr = isWeekend ? satSunEnd : monFriEnd;
+
+    if (startStr == null || endStr == null) {
+      setState(() {
+        timeSlots = [];
+        selectedTimeIndex = -1;
+      });
+      return;
+    }
+
+    TimeOfDay start = _parseTime(startStr);
+    TimeOfDay end = _parseTime(endStr);
+
+    DateTime now = DateTime.now();
+    DateTime startDateTime = DateTime(day.year, day.month, day.day, start.hour, start.minute);
+    DateTime endDateTime = DateTime(day.year, day.month, day.day, end.hour, end.minute);
+
+    DateTime slot = startDateTime;
+
+    while (slot.isBefore(endDateTime)) {
+      DateTime slotEnd = slot.add(const Duration(hours: 1));
+      if (slotEnd.isAfter(endDateTime)) break;
+
+      if (day.year == now.year && day.month == now.month && day.day == now.day) {
+        if (slot.isAfter(now)) {
+          slots.add("${DateFormat.jm().format(slot)} - ${DateFormat.jm().format(slotEnd)}");
+        }
+      } else {
+        slots.add("${DateFormat.jm().format(slot)} - ${DateFormat.jm().format(slotEnd)}");
+      }
+
+      slot = slotEnd;
+    }
+
+    if (slots.isEmpty && fallback) {
+      DateTime tomorrow = day.add(const Duration(days: 1));
+      setState(() {
+        _selectedDay = tomorrow;
+        _focusedDay = tomorrow;
+      });
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _generateTimeSlots(tomorrow, fallback: false);
+      });
+      return;
+    }
+
+    setState(() {
+      timeSlots = slots;
+      selectedTimeIndex = -1;
+    });
+  }
+
+  void _proceedToReview() {
+    final selectedServices = services
+        .where((s) => s["selected"] == true)
+        .map((s) => {
+      "name": s["name"],
+      "price": s["price"],
+    })
+        .toList();
+
+    if (selectedServices.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text("Please select at least one service"),
+          backgroundColor: Colors.orange,
+        ),
+      );
+      return;
+    }
+
+    if (_selectedDay == null || selectedTimeIndex == -1) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text("Please select date and time"),
+          backgroundColor: Colors.orange,
+        ),
+      );
+      return;
+    }
+
+    // Update provider with selected data
+    final provider = context.read<BookingProvider>();
+    provider.setSelectedServices(selectedServices);
+    provider.setDateTime(_selectedDay!, timeSlots[selectedTimeIndex]);
+
+    // Navigate to review summary
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => ReviewSummary(),
+      ),
+    );
   }
 
   @override
@@ -58,7 +194,7 @@ class _BookNowPageState extends State<BookNowPage> {
         elevation: 0,
         surfaceTintColor: Colors.transparent,
         backgroundColor: Colors.white,
-        title: const Text("Our Services"),
+        title: const Text("Book Service"),
         leading: IconButton(
           onPressed: () => Navigator.pop(context),
           icon: const Icon(Icons.arrow_back),
@@ -66,152 +202,237 @@ class _BookNowPageState extends State<BookNowPage> {
       ),
       body: Column(
         children: [
+          // Scrollable Content
           Expanded(
-            child: ListView.builder(
-              itemCount: services.length,
-              padding: EdgeInsets.all(10.w),
-              itemBuilder: (context, index) {
-                final service = services[index];
-
-                return Container(
-                  margin: EdgeInsets.symmetric(vertical: 6.h),
-                  child: Card(
-                    color: const Color(0xFFFFFAF2),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12.r),
+            child: SingleChildScrollView(
+              physics: const BouncingScrollPhysics(), // Better scrolling physics
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Services Section
+                  Padding(
+                    padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 8.h),
+                    child: Text(
+                      "Select Services",
+                      style: TextStyle(fontSize: 18.sp, fontWeight: FontWeight.bold),
                     ),
-                    elevation: 0,
-                    child: Padding(
-                      padding: EdgeInsets.all(10.w),
-                      child: Row(
-                        children: [
-                          ClipRRect(
-                            borderRadius: BorderRadius.circular(12.r),
-                            child: Image.asset(
-                              _getImagePath(service["image"]),
-                              height: 80.w,
-                              width: 80.w,
-                              fit: BoxFit.cover,
-                              errorBuilder: (context, error, stackTrace) {
-                                return Container(
-                                  height: 80.w,
-                                  width: 80.w,
-                                  decoration: BoxDecoration(
-                                    color: Colors.grey[300],
+                  ),
+
+                  // Replace ListView.builder with Column and map
+                  Padding(
+                    padding: EdgeInsets.symmetric(horizontal: 10.w),
+                    child: Column(
+                      children: services.map((service) {
+                        int index = services.indexOf(service);
+                        return Container(
+                          margin: EdgeInsets.symmetric(vertical: 4.h),
+                          child: Card(
+                            color: const Color(0xFFFFFAF2),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12.r),
+                            ),
+                            elevation: 0,
+                            child: Padding(
+                              padding: EdgeInsets.all(10.w),
+                              child: Row(
+                                children: [
+                                  ClipRRect(
                                     borderRadius: BorderRadius.circular(12.r),
+                                    child: Image.asset(
+                                      _getImagePath(service["image"]),
+                                      height: 60.w,
+                                      width: 60.w,
+                                      fit: BoxFit.cover,
+                                    ),
                                   ),
-                                  child: const Icon(Icons.image_not_supported),
-                                );
-                              },
-                            ),
-                          ),
-                          SizedBox(width: 12.w),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  service["name"] ?? "Unknown Service",
-                                  style: TextStyle(
-                                    fontSize: 18.sp,
-                                    fontWeight: FontWeight.w600,
+                                  SizedBox(width: 12.w),
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          service["name"],
+                                          style: TextStyle(
+                                            fontSize: 16.sp,
+                                            fontWeight: FontWeight.w600,
+                                            color: Colors.black,
+                                          ),
+                                        ),
+                                        SizedBox(height: 2.h),
+                                        Text(
+                                          "₹${service["price"]}",
+                                          style: TextStyle(
+                                            fontSize: 14.sp,
+                                            color: Colors.orange,
+                                            fontWeight: FontWeight.w500,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
                                   ),
-                                ),
-                                SizedBox(height: 4.h),
-                                Text(
-                                  "₹${service["price"] ?? 0}",
-                                  style: TextStyle(
-                                    fontSize: 16.sp,
-                                    color: Colors.orange,
-                                    fontWeight: FontWeight.w500,
+                                  Checkbox(
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(6.r),
+                                    ),
+                                    activeColor: Colors.orange,
+                                    value: service["selected"] ?? false,
+                                    onChanged: (value) {
+                                      setState(() {
+                                        service["selected"] = value ?? false;
+                                      });
+                                    },
                                   ),
-                                ),
-                              ],
-                            ),
-                          ),
-                          Transform.scale(
-                            scale: 1.3,
-                            child: Checkbox(
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(6.r),
+                                ],
                               ),
-                              activeColor: Colors.orange,
-                              value: service["selected"] ?? false,
-                              onChanged: (value) {
-                                setState(() {
-                                  service["selected"] = value ?? false;
-                                });
-                              },
                             ),
                           ),
-                        ],
+                        );
+                      }).toList(),
+                    ),
+                  ),
+
+                  // Date Selection
+                  Padding(
+                    padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 8.h),
+                    child: Text(
+                      "Select Date",
+                      style: TextStyle(fontSize: 18.sp, fontWeight: FontWeight.bold),
+                    ),
+                  ),
+
+                  Container(
+                    padding: EdgeInsets.symmetric(horizontal: 12.w),
+                    child: TableCalendar<dynamic>(
+                      firstDay: DateTime.now(),
+                      lastDay: DateTime.now().add(const Duration(days: 365)),
+                      focusedDay: _focusedDay,
+                      calendarFormat: CalendarFormat.month,
+                      selectedDayPredicate: (day) => isSameDay(_selectedDay, day),
+                      onDaySelected: (selectedDay, focusedDay) {
+                        if (!mounted) return;
+                        setState(() {
+                          _selectedDay = selectedDay;
+                          _focusedDay = focusedDay;
+                          _generateTimeSlots(selectedDay);
+                        });
+                      },
+                      calendarStyle: CalendarStyle(
+                        todayDecoration: BoxDecoration(
+                          color: Colors.orange.withOpacity(0.3),
+                          shape: BoxShape.circle,
+                        ),
+                        selectedDecoration: const BoxDecoration(
+                          color: Colors.orange,
+                          shape: BoxShape.circle,
+                        ),
+                        weekendTextStyle: const TextStyle(color: Colors.red),
+                        outsideDaysVisible: false,
+                      ),
+                      headerStyle: const HeaderStyle(
+                        formatButtonVisible: false,
+                        titleCentered: true,
                       ),
                     ),
                   ),
-                );
-              },
+
+                  // Time Slots
+                  Padding(
+                    padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 8.h),
+                    child: Text(
+                      "Select Time Slot",
+                      style: TextStyle(fontSize: 18.sp, fontWeight: FontWeight.bold),
+                    ),
+                  ),
+
+                  if (timeSlots.isEmpty)
+                    Padding(
+                      padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 4.h),
+                      child: Text(
+                        "No slots available for this day. Please select another date.",
+                        style: TextStyle(
+                          fontSize: 14.sp,
+                          fontWeight: FontWeight.w500,
+                          color: Colors.redAccent,
+                        ),
+                      ),
+                    )
+                  else
+                    SizedBox(
+                      height: 60.h,
+                      child: ListView.builder(
+                        scrollDirection: Axis.horizontal,
+                        padding: EdgeInsets.symmetric(horizontal: 12.w),
+                        itemCount: timeSlots.length,
+                        itemBuilder: (context, index) {
+                          return GestureDetector(
+                            onTap: () {
+                              setState(() {
+                                selectedTimeIndex = index;
+                              });
+                            },
+                            child: Container(
+                              margin: EdgeInsets.symmetric(horizontal: 4.w),
+                              height: 50.h,
+                              width: 150.w,
+                              alignment: Alignment.center,
+                              decoration: BoxDecoration(
+                                color: selectedTimeIndex == index ? Colors.orange : Colors.white,
+                                border: Border.all(color: Colors.orange, width: 2),
+                                borderRadius: BorderRadius.circular(25.r),
+                              ),
+                              child: Text(
+                                timeSlots[index],
+                                style: TextStyle(
+                                  color: selectedTimeIndex == index ? Colors.white : Colors.orange,
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 12.sp,
+                                ),
+                              ),
+                            ),
+                          );
+                        },
+                      ),
+                    ),
+
+                  SizedBox(height: 100.h), // Extra bottom padding to ensure button doesn't overlap
+                ],
+              ),
             ),
           ),
+
+          // Static Continue Button
           Container(
             padding: EdgeInsets.all(16.w),
             width: double.infinity,
-            color: Colors.white,
-            child: ElevatedButton(
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.orange,
-                elevation: 0,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(15.r),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.grey.withOpacity(0.3),
+                  spreadRadius: 1,
+                  blurRadius: 5,
+                  offset: const Offset(0, -2),
                 ),
-                padding: EdgeInsets.symmetric(vertical: 14.h),
-              ),
-              onPressed: () {
-                final selectedServices = services
-                    .where((s) => s["selected"] == true)
-                    .map((s) => {
-                  "name": s["name"],
-                  "price": s["price"],
-                  "image": s["image"],
-                })
-                    .toList();
-
-                print("DEBUG: Selected services before navigation: $selectedServices");
-
-                if (selectedServices.isEmpty) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text("Please select at least one service"),
-                      backgroundColor: Colors.orange,
-                    ),
-                  );
-                  return;
-                }
-
-                try {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (_) => DateTimeSelectionPage(
-                        selectedServices: selectedServices,
-                      ),
-                    ),
-                  );
-                } catch (e) {
-                  print("ERROR during navigation: $e");
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text("Navigation error occurred"),
-                      backgroundColor: Colors.red,
-                    ),
-                  );
-                }
-              },
-              child: Text(
-                "Apply",
-                style: TextStyle(
-                  fontSize: 16.sp,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.white,
+              ],
+            ),
+            child: SafeArea(
+              child: ElevatedButton(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.orange,
+                  elevation: 0,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(15.r),
+                  ),
+                  padding: EdgeInsets.symmetric(vertical: 14.h),
+                ),
+                onPressed: _proceedToReview,
+                child: Text(
+                  "Apply",
+                  style: TextStyle(
+                    fontSize: 16.sp,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.white,
+                  ),
                 ),
               ),
             ),

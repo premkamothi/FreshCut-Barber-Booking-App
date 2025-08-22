@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:project_sem7/booking/booked_slot.dart';
 import 'package:project_sem7/uiscreen/RegisterPage.dart';
 import '../shop_profile/edit_shop_profile.dart';
 import '../shop_profile/shop_profile.dart';
@@ -22,7 +23,7 @@ class _BottomNavBarState extends State<BottomNavBar> {
 
   final List<Widget> _pages = const [
     MainHomePage(),
-    Registerpage(),
+    BookedSlot(),
     LocationAndBarberShop(),
     LikedShops(),
     Settings(),

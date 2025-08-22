@@ -1,14 +1,21 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:project_sem7/booking/review_summary.dart';
 import 'package:table_calendar/table_calendar.dart';
 import 'package:intl/intl.dart';
 
+import '../models/mearge_barber_model.dart';
+
 class DateTimeSelectionPage extends StatefulWidget {
   final List<Map<String, dynamic>> selectedServices;
+  final MergedBarber barber;
 
   const DateTimeSelectionPage({
     super.key,
     required this.selectedServices,
+    required this.barber,
   });
 
   @override
@@ -18,20 +25,104 @@ class DateTimeSelectionPage extends StatefulWidget {
 class _DateTimeSelectionPageState extends State<DateTimeSelectionPage> {
   DateTime _focusedDay = DateTime.now();
   DateTime? _selectedDay;
-  TimeOfDay? _selectedTime;
+  int selectedIndex = -1;
+  List<String> timeSlots = [];
+
+  late String? monFriStart;
+  late String? monFriEnd;
+  late String? satSunStart;
+  late String? satSunEnd;
 
   @override
   void initState() {
     super.initState();
-    _selectedTime = null;
-    print("DEBUG: Selected services: ${widget.selectedServices}");
+
+    monFriStart = widget.barber.monFriStart;
+    monFriEnd = widget.barber.monFriEnd;
+    satSunStart = widget.barber.satSunStart;
+    satSunEnd = widget.barber.satSunEnd;
+
+    print("DEBUG: Barber working hours: "
+        "Mon-Fri $monFriStart - $monFriEnd | Sat-Sun $satSunStart - $satSunEnd");
   }
+
+  /// Parse "09:00 AM" into TimeOfDay
+  TimeOfDay _parseTime(String time) {
+    final df = DateFormat.jm(); // "h:mm a"
+    final dt = df.parse(time);
+    return TimeOfDay.fromDateTime(dt);
+  }
+
+  /// Generate hourly slots based on working hours
+  /// Generate hourly slots based on working hours
+  void _generateTimeSlots(DateTime day, {bool fallback = true}) {
+    List<String> slots = [];
+
+    bool isWeekend = (day.weekday == DateTime.saturday || day.weekday == DateTime.sunday);
+
+    String? startStr = isWeekend ? satSunStart : monFriStart;
+    String? endStr = isWeekend ? satSunEnd : monFriEnd;
+
+    if (startStr == null || endStr == null) {
+      setState(() {
+        timeSlots = [];
+        selectedIndex = -1;
+      });
+      return;
+    }
+
+    TimeOfDay start = _parseTime(startStr);
+    TimeOfDay end = _parseTime(endStr);
+
+    DateTime now = DateTime.now();
+    DateTime startDateTime = DateTime(day.year, day.month, day.day, start.hour, start.minute);
+    DateTime endDateTime = DateTime(day.year, day.month, day.day, end.hour, end.minute);
+
+    DateTime slot = startDateTime;
+
+    while (slot.isBefore(endDateTime)) {
+      DateTime slotEnd = slot.add(const Duration(hours: 1));
+      if (slotEnd.isAfter(endDateTime)) break;
+
+      if (day.year == now.year && day.month == now.month && day.day == now.day) {
+        // today → only future slots
+        if (slot.isAfter(now)) {
+          slots.add("${DateFormat.jm().format(slot)} - ${DateFormat.jm().format(slotEnd)}");
+        }
+      } else {
+        // future day → keep all slots
+        slots.add("${DateFormat.jm().format(slot)} - ${DateFormat.jm().format(slotEnd)}");
+      }
+
+      slot = slotEnd;
+    }
+
+    if (slots.isEmpty && fallback) {
+      // 🔥 fallback: move to tomorrow and generate again
+      DateTime tomorrow = day.add(const Duration(days: 1));
+
+      setState(() {
+        _selectedDay = tomorrow;
+        _focusedDay = tomorrow;
+      });
+
+      // regenerate slots for tomorrow
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _generateTimeSlots(tomorrow, fallback: false);
+      });
+      return;
+    }
+
+    setState(() {
+      timeSlots = slots;
+      selectedIndex = -1;
+    });
+  }
+
+
 
   @override
   Widget build(BuildContext context) {
-    print("DEBUG: _selectedTime type: ${_selectedTime.runtimeType}");
-    print("DEBUG: _selectedTime value: $_selectedTime");
-
     return Scaffold(
       backgroundColor: Colors.white,
       appBar: AppBar(
@@ -47,11 +138,11 @@ class _DateTimeSelectionPageState extends State<DateTimeSelectionPage> {
       body: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Calendar Section
+          // Calendar
           Padding(
             padding: EdgeInsets.all(12.w),
             child: SizedBox(
-              height: 340.h,
+              height: 343.h,
               child: TableCalendar<dynamic>(
                 firstDay: DateTime.now(),
                 lastDay: DateTime.now().add(const Duration(days: 365)),
@@ -63,6 +154,7 @@ class _DateTimeSelectionPageState extends State<DateTimeSelectionPage> {
                   setState(() {
                     _selectedDay = selectedDay;
                     _focusedDay = focusedDay;
+                    _generateTimeSlots(selectedDay);
                   });
                 },
                 calendarStyle: CalendarStyle(
@@ -85,20 +177,63 @@ class _DateTimeSelectionPageState extends State<DateTimeSelectionPage> {
             ),
           ),
 
-          // Time Selection Section
+          // Slots
+          // Slots Section
           Padding(
             padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 8.h),
             child: Text(
               "Book Slot",
-              style: TextStyle(
-                fontSize: 18.sp,
-                fontWeight: FontWeight.bold,
-              ),
+              style: TextStyle(fontSize: 18.sp, fontWeight: FontWeight.bold),
             ),
           ),
 
-          // Time Picker - Using Card Style
-          _timePickerCardStyle(),
+// 🔥 Show message if no slots
+          if (timeSlots.isEmpty)
+            Padding(
+              padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 4.h),
+              child: Text(
+                "No slots available for this day. Please select another date.",
+                style: TextStyle(
+                  fontSize: 14.sp,
+                  fontWeight: FontWeight.w500,
+                  color: Colors.redAccent,
+                ),
+              ),
+            )
+          else
+            SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: Row(
+                children: List.generate(timeSlots.length, (index) {
+                  return GestureDetector(
+                    onTap: () {
+                      setState(() {
+                        selectedIndex = index;
+                      });
+                    },
+                    child: Container(
+                      margin: const EdgeInsets.symmetric(horizontal: 8),
+                      height: 50,
+                      width: 150,
+                      alignment: Alignment.center,
+                      decoration: BoxDecoration(
+                        color: selectedIndex == index ? Colors.orange : Colors.white,
+                        border: Border.all(color: Colors.orange, width: 2),
+                        borderRadius: BorderRadius.circular(40),
+                      ),
+                      child: Text(
+                        timeSlots[index],
+                        style: TextStyle(
+                          color: selectedIndex == index ? Colors.white : Colors.orange,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                  );
+                }),
+              ),
+            ),
+
 
           const Spacer(),
 
@@ -116,7 +251,65 @@ class _DateTimeSelectionPageState extends State<DateTimeSelectionPage> {
                 ),
                 padding: EdgeInsets.symmetric(vertical: 14.h),
               ),
-              onPressed: _handleContinuePressed,
+              onPressed: selectedIndex == -1 || _selectedDay == null
+                  ? null
+                  : () async {
+                final user = FirebaseAuth.instance.currentUser!;
+                String uid = user.uid;
+
+                String selectedSlot = timeSlots[selectedIndex];
+                String selectedDate = DateFormat("yyyy-MM-dd").format(_selectedDay!);
+
+                // ✅ Calculate total price
+                int totalPrice = widget.selectedServices.fold(0, (sum, s) => sum + (s['price'] as int));
+
+                Map<String, dynamic> bookingData = {
+                  "userId": uid,
+                  "barberId": widget.barber.placeId,
+                  "services": widget.selectedServices,
+                  "totalPrice": totalPrice,
+                  "date": selectedDate,
+                  "slot": selectedSlot,
+                  "createdAt": DateTime.now().toIso8601String(), // ✅ safe timestamp
+                };
+
+                final firestore = FirebaseFirestore.instance;
+
+                try {
+                  // Save under Barber's document
+                  await firestore.collection("BookedSlots").doc(widget.barber.placeId).set({
+                    "placeId": widget.barber.placeId,
+                    "bookings": FieldValue.arrayUnion([bookingData]),
+                    "updatedAt": FieldValue.serverTimestamp(), // ✅ here is valid
+                  }, SetOptions(merge: true));
+
+                  // Save under User's document
+                  await firestore.collection("BookedSlots").doc(uid).set({
+                    "userId": uid,
+                    "bookings": FieldValue.arrayUnion([bookingData]),
+                    "updatedAt": FieldValue.serverTimestamp(),
+                  }, SetOptions(merge: true));
+
+                  // Navigate to Review Page
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => ReviewSummary(
+                        // barber: widget.barber,
+                        // selectedServices: widget.selectedServices,
+                        // selectedDate: _selectedDay!,
+                        // selectedSlot: selectedSlot,
+                      ),
+                    ),
+                  );
+                } catch (e) {
+                  print("❌ Error saving booking: $e");
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text("Failed to book slot. Try again.")),
+                  );
+                }
+              },
+
               child: Text(
                 "Continue",
                 style: TextStyle(
@@ -126,271 +319,9 @@ class _DateTimeSelectionPageState extends State<DateTimeSelectionPage> {
                 ),
               ),
             ),
-          ),
+          )
         ],
       ),
     );
-  }
-
-  // Card Style Time Picker
-  Widget _timePickerCardStyle() {
-    return Padding(
-      padding: EdgeInsets.symmetric(horizontal: 12.w),
-      child: Card(
-        elevation: 2,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(12.r),
-        ),
-        child: InkWell(
-          borderRadius: BorderRadius.circular(12.r),
-          onTap: () async {
-            try {
-              final TimeOfDay? pickedTime = await showTimePicker(
-                context: context,
-                initialTime: _selectedTime ?? TimeOfDay.now(),
-              );
-
-              if (pickedTime != null && mounted) {
-                setState(() {
-                  _selectedTime = pickedTime;
-                });
-                print("DEBUG: Time selected: $pickedTime");
-              }
-            } catch (e) {
-              print("ERROR in time picker: $e");
-            }
-          },
-          child: Padding(
-            padding: EdgeInsets.all(16.w),
-            child: Row(
-              children: [
-                Container(
-                  padding: EdgeInsets.all(8.w),
-                  decoration: BoxDecoration(
-                    color: Colors.orange.withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(8.r),
-                  ),
-                  child: Icon(
-                    Icons.access_time,
-                    color: Colors.orange,
-                    size: 24.w,
-                  ),
-                ),
-                SizedBox(width: 16.w),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        "Select Time",
-                        style: TextStyle(
-                          fontSize: 16.sp,
-                          fontWeight: FontWeight.w600,
-                          color: Colors.grey[800],
-                        ),
-                      ),
-                      SizedBox(height: 2.h),
-                      Text(
-                        _selectedTime == null
-                            ? "Tap to choose time"
-                            : _selectedTime!.format(context),
-                        style: TextStyle(
-                          fontSize: 14.sp,
-                          color: _selectedTime == null ? Colors.grey : Colors.orange,
-                          fontWeight: _selectedTime == null ? FontWeight.normal : FontWeight.w600,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                Icon(
-                  Icons.keyboard_arrow_right,
-                  color: Colors.grey[400],
-                  size: 24.w,
-                ),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-
-  // Alternative: FAB Style Time Picker
-  Widget _timePickerFabStyle() {
-    return Padding(
-      padding: EdgeInsets.symmetric(horizontal: 12.w),
-      child: Column(
-        children: [
-          if (_selectedTime != null)
-            Container(
-              width: double.infinity,
-              padding: EdgeInsets.all(12.w),
-              margin: EdgeInsets.only(bottom: 8.h),
-              decoration: BoxDecoration(
-                color: Colors.green.withOpacity(0.1),
-                borderRadius: BorderRadius.circular(8.r),
-                border: Border.all(color: Colors.green.withOpacity(0.3)),
-              ),
-              child: Row(
-                children: [
-                  Icon(Icons.check_circle, color: Colors.green, size: 20.w),
-                  SizedBox(width: 8.w),
-                  Text(
-                    "Time Selected: ${_selectedTime!.format(context)}",
-                    style: TextStyle(
-                      fontSize: 14.sp,
-                      fontWeight: FontWeight.w600,
-                      color: Colors.green[700],
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          FloatingActionButton.extended(
-            onPressed: () async {
-              try {
-                final TimeOfDay? pickedTime = await showTimePicker(
-                  context: context,
-                  initialTime: _selectedTime ?? TimeOfDay.now(),
-                );
-
-                if (pickedTime != null && mounted) {
-                  setState(() {
-                    _selectedTime = pickedTime;
-                  });
-                  print("DEBUG: Time selected: $pickedTime");
-                }
-              } catch (e) {
-                print("ERROR in time picker: $e");
-              }
-            },
-            backgroundColor: Colors.orange,
-            foregroundColor: Colors.white,
-            icon: const Icon(Icons.access_time),
-            label: Text(
-              _selectedTime == null ? "Pick Time" : "Change Time",
-              style: TextStyle(
-                fontSize: 16.sp,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  // Alternative: Border Style Time Picker
-  Widget _timePickerBorderStyle() {
-    return Padding(
-      padding: EdgeInsets.symmetric(horizontal: 12.w),
-      child: GestureDetector(
-        onTap: () async {
-          try {
-            final TimeOfDay? pickedTime = await showTimePicker(
-              context: context,
-              initialTime: _selectedTime ?? TimeOfDay.now(),
-            );
-
-            if (pickedTime != null && mounted) {
-              setState(() {
-                _selectedTime = pickedTime;
-              });
-              print("DEBUG: Time selected: $pickedTime");
-            }
-          } catch (e) {
-            print("ERROR in time picker: $e");
-          }
-        },
-        child: Container(
-          padding: EdgeInsets.all(16.w),
-          decoration: BoxDecoration(
-            border: Border.all(
-              color: _selectedTime == null ? Colors.grey[300]! : Colors.orange,
-              width: 2,
-            ),
-            borderRadius: BorderRadius.circular(12.r),
-            color: _selectedTime == null ? Colors.grey[50] : Colors.orange.withOpacity(0.05),
-          ),
-          child: Row(
-            children: [
-              Icon(
-                Icons.schedule,
-                color: _selectedTime == null ? Colors.grey[600] : Colors.orange,
-                size: 24.w,
-              ),
-              SizedBox(width: 12.w),
-              Text(
-                _selectedTime == null
-                    ? "Select Time Slot"
-                    : "Selected: ${_selectedTime!.format(context)}",
-                style: TextStyle(
-                  fontSize: 16.sp,
-                  fontWeight: FontWeight.w600,
-                  color: _selectedTime == null ? Colors.grey[600] : Colors.orange,
-                ),
-              ),
-              const Spacer(),
-              Icon(
-                _selectedTime == null ? Icons.add : Icons.check_circle,
-                color: _selectedTime == null ? Colors.grey[400] : Colors.green,
-                size: 20.w,
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  void _handleContinuePressed() {
-    try {
-      if (_selectedDay == null || _selectedTime == null) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text("Please select date and time"),
-            backgroundColor: Colors.red,
-          ),
-        );
-        return;
-      }
-
-      // Calculate total price
-      int totalPrice = widget.selectedServices
-          .map<int>((service) => service["price"] as int)
-          .reduce((a, b) => a + b);
-
-      // Safe access to _selectedTime
-      final timeText = _selectedTime!.format(context);
-
-      print("=== BOOKING DETAILS ===");
-      print("Selected Services: ${widget.selectedServices.map((s) => s["name"]).join(", ")}");
-      print("Total Price: ₹$totalPrice");
-      print("Date: ${DateFormat('dd MMM yyyy').format(_selectedDay!)}");
-      print("Time: $timeText");
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            "Booking confirmed for ${DateFormat('dd MMM yyyy').format(_selectedDay!)} at $timeText\nTotal: ₹$totalPrice",
-          ),
-          backgroundColor: Colors.green,
-          duration: const Duration(seconds: 3),
-        ),
-      );
-
-      // Navigate to next page or perform booking action
-      // Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => BookingConfirmationPage()));
-
-    } catch (e) {
-      print("ERROR in continue button: $e");
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text("An error occurred. Please try again."),
-          backgroundColor: Colors.red,
-        ),
-      );
-    }
   }
 }
