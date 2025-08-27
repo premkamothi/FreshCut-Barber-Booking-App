@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:project_sem7/uiscreen/NavBar.bart.dart';
 import 'package:project_sem7/uiscreen/StartingPage.dart';
 import 'package:project_sem7/uiscreen/bottom_nav_bar.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -21,11 +22,11 @@ void main() async {
   if (!isLoggedIn) {
     initialScreen = Startingpage(); // choose owner or customer
   } else if (userType == 'owner') {
-    initialScreen = BottomNavBar(initialIndex: 0);
+    initialScreen = NavBar();
   } else if (userType == 'customer') {
     initialScreen = BottomNavBar(initialIndex: 0);
   } else {
-    initialScreen = Startingpage(); // fallback
+    initialScreen = Startingpage();
   }
 
   runApp(MyApp(initialScreen: initialScreen));
@@ -46,7 +47,7 @@ class MyApp extends StatelessWidget {
         return MultiProvider( // Changed from ChangeNotifierProvider to MultiProvider
           providers: [
             ChangeNotifierProvider(create: (_) => LikedShopsProvider()), // Your existing provider
-            ChangeNotifierProvider(create: (_) => BookingProvider()),     // Added BookingProvider
+            ChangeNotifierProvider(create: (_) => BookingProvider()),
           ],
           child: MaterialApp(
             debugShowCheckedModeBanner: false,

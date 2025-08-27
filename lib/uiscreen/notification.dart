@@ -11,11 +11,10 @@ class Notifications extends StatefulWidget {
 
 class _NotificationsState extends State<Notifications> {
   final firestore = FirebaseFirestore.instance;
+  final Set<String> processedBookings = {}; // Track acted bookings
 
-  // Track bookings that have been acted upon in this session
-  final Set<String> processedBookings = {};
-
-  Future<String?> _getShopPlaceId() async {
+  /// Get shop owner UID (RegisteredShops document ID)
+  Future<String?> _getShopOwnerUid() async {
     final user = FirebaseAuth.instance.currentUser;
     if (user == null) return null;
 
@@ -23,138 +22,118 @@ class _NotificationsState extends State<Notifications> {
     await firestore.collection("RegisteredShops").doc(user.uid).get();
     if (!shopDoc.exists) return null;
 
-    final data = shopDoc.data();
-    return data?['googlePlaceId'] as String?;
+    return shopDoc.id;
   }
 
-  /// Update booking status → accept / decline
-  void _updateBookingStatus(
-      Map<String, dynamic> booking, bool accepted, String bookingId) async {
+  /// Accept / Decline booking → updates "status" inside bookings array
+  Future<void> _updateBookingStatus(
+      String docId, // Owner's BookedSlots docId
+      String bookingId,
+      bool accepted,
+      ) async {
+    try {
+      final bookingDocRef = firestore.collection("BookedSlots").doc(docId);
+      final snapshot = await bookingDocRef.get();
+      if (!snapshot.exists) return;
 
-    final barberDocRef = firestore.collection("BookedSlots").doc(booking['placeId']);
-    final userDocRef =
-    firestore.collection("BookedSlots").doc(booking['userId']);
+      final data = snapshot.data()!;
+      final allowedUserIds = List<String>.from(data['allowedUserIds'] ?? []);
 
-    final updatedBooking = {
-      ...booking,
-      "selected_status": accepted, // true = accepted, false = declined
-    };
+      final currentUserId = FirebaseAuth.instance.currentUser!.uid;
+      if (!allowedUserIds.contains(currentUserId)) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text("You are not authorized to update this booking")),
+        );
+        return;
+      }
 
-    // Update barber's bookings
-    await barberDocRef.update({
-      "bookings": FieldValue.arrayRemove([booking]),
-    });
-    await barberDocRef.update({
-      "bookings": FieldValue.arrayUnion([updatedBooking]),
-    });
+      // ------------------------------
+      // Owner side update (match by bookingId)
+      // ------------------------------
+      List bookings = List.from(data['bookings'] ?? []);
+      int ownerBookingIndex =
+      bookings.indexWhere((b) => (b['bookingId'] ?? "") == bookingId);
 
-    // Update user's bookings
-    final userData = await userDocRef.get();
-    if (userData.exists) {
-      final userBookings =
-      (userData.data()!['bookings'] as List<dynamic>? ?? []);
-      final oldBooking = userBookings.firstWhere(
-            (b) =>
-        b['slot'] == booking['slot'] &&
-            b['placeId'] == booking['placeId'] &&
-            b['date'] == booking['date'],
-        orElse: () => null,
+      if (ownerBookingIndex == -1) return;
+
+      bookings[ownerBookingIndex]['status'] = accepted;
+      final booking = Map<String, dynamic>.from(bookings[ownerBookingIndex]);
+
+      await bookingDocRef.update({
+        'bookings': bookings,
+        'updatedAt': FieldValue.serverTimestamp(),
+      });
+
+      // UI feedback
+      setState(() => processedBookings.add(bookingId));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(accepted ? "Booking Accepted ✅" : "Booking Declined ❌")),
       );
 
-      if (oldBooking != null) {
+      // ------------------------------
+      // User side update (mirror by bookingId)
+      // ------------------------------
+      final userId = booking['userId'] as String;
+      final userDocRef = firestore.collection("BookedSlots").doc(userId);
+
+      final userSnapshot = await userDocRef.get();
+      if (!userSnapshot.exists) return;
+
+      final userData = userSnapshot.data()!;
+      List userBookings = List.from(userData['bookings'] ?? []);
+
+      int userBookingIndex =
+      userBookings.indexWhere((b) => (b['bookingId'] ?? "") == bookingId);
+
+      if (userBookingIndex != -1) {
+        userBookings[userBookingIndex]['status'] = accepted;
         await userDocRef.update({
-          "bookings": FieldValue.arrayRemove([oldBooking]),
-        });
-        await userDocRef.update({
-          "bookings": FieldValue.arrayUnion([updatedBooking]),
+          'bookings': userBookings,
+          'updatedAt': FieldValue.serverTimestamp(),
         });
       }
+    } catch (e) {
+      debugPrint("Error updating booking status: $e");
     }
-
-    setState(() {
-      processedBookings.add(bookingId);
-    });
-
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-          content:
-          Text(accepted ? "Booking accepted" : "Booking declined")),
-    );
   }
 
-  /// Update arrival status → store in Customer_visited only if arrived == true
-  void _updateArrivalStatus(
-      Map<String, dynamic> booking, bool arrived, String bookingId) async {
 
-    final barberDocRef = firestore.collection("BookedSlots").doc(booking['placeId']);
-    final userDocRef =
-    firestore.collection("BookedSlots").doc(booking['userId']);
 
-    final updatedBooking = {
-      ...booking,
-      "arrived": arrived, // true = visited, false = not on time
-    };
 
-    // Update barber's bookings
-    await barberDocRef.update({
-      "bookings": FieldValue.arrayRemove([booking]),
-    });
-    await barberDocRef.update({
-      "bookings": FieldValue.arrayUnion([updatedBooking]),
-    });
+  /// Customer visited / not on time
+  Future<void> _updateArrivalStatus(
+      String docId, int bookingIndex, bool arrived) async {
+    try {
+      final bookingDocRef =
+      firestore.collection("BookedSlots").doc(docId);
 
-    // Update user's bookings
-    final userData = await userDocRef.get();
-    if (userData.exists) {
-      final userBookings =
-      (userData.data()!['bookings'] as List<dynamic>? ?? []);
-      final oldBooking = userBookings.firstWhere(
-            (b) =>
-        b['slot'] == booking['slot'] &&
-            b['placeId'] == booking['placeId'] &&
-            b['date'] == booking['date'],
-        orElse: () => null,
+      final snapshot = await bookingDocRef.get();
+      if (!snapshot.exists) return;
+
+      final data = snapshot.data()!;
+      final bookings = List.from(data['bookings'] ?? []);
+      if (bookingIndex < 0 || bookingIndex >= bookings.length) return;
+
+      final booking = bookings[bookingIndex];
+      booking['arrived'] = arrived;
+
+      await bookingDocRef.update({
+        'bookings': bookings,
+        'updatedAt': FieldValue.serverTimestamp(),
+      });
+
+      setState(() => processedBookings.add(
+          "${booking['slot']}-${booking['date']}-${booking['userId']}"));
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+            content: Text(arrived
+                ? "Customer has been visited ✅"
+                : "Customer not on time ❌")),
       );
-
-      if (oldBooking != null) {
-        await userDocRef.update({
-          "bookings": FieldValue.arrayRemove([oldBooking]),
-        });
-        await userDocRef.update({
-          "bookings": FieldValue.arrayUnion([updatedBooking]),
-        });
-      }
+    } catch (e) {
+      debugPrint("Error updating arrival status: $e");
     }
-
-    // Only store in Customer_visited if arrived == true
-    if (arrived) {
-      final placeId = booking['placeId'];
-      final shopVisitedRef = firestore.collection("Customer_visited").doc(placeId);
-
-      final visitData = {
-        "customerId": booking['userId'],
-        "customerName": booking['user']?['name'] ?? "",
-        "customerMobile": booking['user']?['mobile'] ?? "",
-        "booking": updatedBooking,
-        "timestamp": FieldValue.serverTimestamp(),
-      };
-
-      await shopVisitedRef.set({
-        "shopId": placeId,
-        "visitedBookings": FieldValue.arrayUnion([visitData])
-      }, SetOptions(merge: true)); // merge ensures multiple entries are appended
-    }
-
-    setState(() {
-      processedBookings.add(bookingId);
-    });
-
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-          content: Text(arrived
-              ? "Customer has been visited ✅"
-              : "Customer not on time ❌")),
-    );
   }
 
   @override
@@ -162,7 +141,7 @@ class _NotificationsState extends State<Notifications> {
     return Scaffold(
       appBar: AppBar(title: const Text("Notifications")),
       body: FutureBuilder<String?>(
-        future: _getShopPlaceId(),
+        future: _getShopOwnerUid(),
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
             return const Center(child: CircularProgressIndicator());
@@ -171,12 +150,10 @@ class _NotificationsState extends State<Notifications> {
             return const Center(child: Text("No shop registered for this user"));
           }
 
-          final shopPlaceId = snapshot.data!;
+          final ownerUid = snapshot.data!;
           return StreamBuilder<DocumentSnapshot>(
-            stream: firestore
-                .collection("BookedSlots")
-                .doc(shopPlaceId)
-                .snapshots(),
+            stream:
+            firestore.collection("BookedSlots").doc(ownerUid).snapshots(),
             builder: (context, snapshot) {
               if (snapshot.connectionState == ConnectionState.waiting) {
                 return const Center(child: CircularProgressIndicator());
@@ -200,16 +177,15 @@ class _NotificationsState extends State<Notifications> {
                   final booking = bookings[index] as Map<String, dynamic>;
                   final bookingId =
                       "${booking['slot']}-${booking['date']}-${booking['userId']}";
-                  final profile = booking['user'] as Map<String, dynamic>? ?? {};
+                  final profile = booking['profile'] as Map<String, dynamic>? ?? {};
                   final services = booking['services'] as List<dynamic>? ?? [];
-
-                  final bool? selectedStatus =
-                  booking['selected_status']; // null, true, or false
+                  final bool? status = booking['status'];
                   final bool? arrived = booking['arrived'];
 
                   final showAcceptDeclineButtons =
-                      !processedBookings.contains(bookingId) &&
-                          selectedStatus == null;
+                      !processedBookings.contains(bookingId) && status == null;
+                  final showArrivalButtons =
+                      status == true && arrived == null;
 
                   return Card(
                     margin: const EdgeInsets.only(bottom: 16),
@@ -221,6 +197,7 @@ class _NotificationsState extends State<Notifications> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
+                          // Profile
                           Row(
                             children: [
                               CircleAvatar(
@@ -240,14 +217,18 @@ class _NotificationsState extends State<Notifications> {
                                           fontWeight: FontWeight.bold,
                                           fontSize: 16)),
                                   Text(profile['mobile'] ?? "No Phone",
-                                      style: const TextStyle(color: Colors.grey)),
+                                      style:
+                                      const TextStyle(color: Colors.grey)),
                                   Text(profile['email'] ?? "No Email",
-                                      style: const TextStyle(color: Colors.grey)),
+                                      style:
+                                      const TextStyle(color: Colors.grey)),
                                 ],
                               ),
                             ],
                           ),
                           const SizedBox(height: 12),
+
+                          // Time + Date
                           Row(
                             children: [
                               const Icon(Icons.access_time,
@@ -266,6 +247,8 @@ class _NotificationsState extends State<Notifications> {
                             ],
                           ),
                           const SizedBox(height: 8),
+
+                          // Services
                           Wrap(
                             spacing: 8,
                             runSpacing: 4,
@@ -283,6 +266,8 @@ class _NotificationsState extends State<Notifications> {
                             }).toList(),
                           ),
                           const SizedBox(height: 8),
+
+                          // Total Price
                           Text("Total: ₹${booking['totalPrice'] ?? 0}",
                               style: const TextStyle(fontWeight: FontWeight.bold)),
                           const SizedBox(height: 16),
@@ -302,7 +287,7 @@ class _NotificationsState extends State<Notifications> {
                                       ),
                                     ),
                                     onPressed: () => _updateBookingStatus(
-                                        booking, true, bookingId),
+                                        ownerUid, booking['bookingId'], true),
                                     child: const Text("Accept",
                                         style: TextStyle(fontSize: 16)),
                                   ),
@@ -319,19 +304,14 @@ class _NotificationsState extends State<Notifications> {
                                       ),
                                     ),
                                     onPressed: () => _updateBookingStatus(
-                                        booking, false, bookingId),
+                                        ownerUid, booking['bookingId'], false),
                                     child: const Text("Decline",
                                         style: TextStyle(fontSize: 16)),
                                   ),
                                 ),
                               ],
                             ),
-                          ] else if (selectedStatus == false) ...[
-                            const Text("Request Declined ❌",
-                                style: TextStyle(
-                                    color: Colors.red,
-                                    fontWeight: FontWeight.bold)),
-                          ] else if (selectedStatus == true && arrived == null) ...[
+                          ] else if (showArrivalButtons) ...[
                             Row(
                               children: [
                                 Expanded(
@@ -345,7 +325,7 @@ class _NotificationsState extends State<Notifications> {
                                       ),
                                     ),
                                     onPressed: () => _updateArrivalStatus(
-                                        booking, true, bookingId),
+                                        ownerUid, index, true),
                                     child: const Text("Customer visited",
                                         style: TextStyle(fontSize: 16)),
                                   ),
@@ -362,22 +342,33 @@ class _NotificationsState extends State<Notifications> {
                                       ),
                                     ),
                                     onPressed: () => _updateArrivalStatus(
-                                        booking, false, bookingId),
+                                        ownerUid, index, false),
                                     child: const Text("Not on time",
                                         style: TextStyle(fontSize: 16)),
                                   ),
                                 ),
                               ],
                             ),
-                          ] else if (selectedStatus == true && arrived != null) ...[
+                          ] else if (status != null) ...[
                             Text(
-                              arrived
+                              arrived == true
                                   ? "Customer has been visited ✅"
-                                  : "Customer not on time ❌",
+                                  : arrived == false
+                                  ? "Customer not on time ❌"
+                                  : status
+                                  ? "Booking Accepted ✅"
+                                  : "Booking Declined ❌",
                               style: TextStyle(
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 16,
-                                  color: arrived ? Colors.green : Colors.red),
+                                fontWeight: FontWeight.bold,
+                                fontSize: 16,
+                                color: arrived == true
+                                    ? Colors.green
+                                    : arrived == false
+                                    ? Colors.red
+                                    : status
+                                    ? Colors.green
+                                    : Colors.red,
+                              ),
                             ),
                           ],
                         ],

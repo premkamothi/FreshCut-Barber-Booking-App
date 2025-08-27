@@ -3,6 +3,8 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:provider/provider.dart';
 import 'package:table_calendar/table_calendar.dart';
 import 'package:intl/intl.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+
 import '../models/mearge_barber_model.dart';
 import '../providers/booking_provider.dart';
 import 'review_summary.dart';
@@ -22,6 +24,7 @@ class _BookNowPageState extends State<BookNowPage> {
   DateTime? _selectedDay;
   int selectedTimeIndex = -1;
   List<String> timeSlots = [];
+  Set<String> bookedSlots = {}; // Already booked slots
 
   late String? monFriStart;
   late String? monFriEnd;
@@ -68,13 +71,12 @@ class _BookNowPageState extends State<BookNowPage> {
       };
     }).toList();
 
-    // Initialize barber working hours
+    // Working hours
     monFriStart = widget.barber.monFriStart;
     monFriEnd = widget.barber.monFriEnd;
     satSunStart = widget.barber.satSunStart;
     satSunEnd = widget.barber.satSunEnd;
 
-    // Set barber in provider
     WidgetsBinding.instance.addPostFrameCallback((_) {
       context.read<BookingProvider>().setBarber(widget.barber);
     });
@@ -86,7 +88,37 @@ class _BookNowPageState extends State<BookNowPage> {
     return TimeOfDay.fromDateTime(dt);
   }
 
-  void _generateTimeSlots(DateTime day, {bool fallback = true}) {
+  /// Fetch already booked slots for the selected barber & date
+  Future<void> _fetchBookedSlots(DateTime day) async {
+    try {
+      final snapshot = await FirebaseFirestore.instance
+          .collection("BookedSlots")
+          .doc(widget.barber.ownerUid)
+          .get();
+
+      if (snapshot.exists) {
+        final data = snapshot.data() as Map<String, dynamic>;
+        final bookings = List.from(data['bookings'] ?? []);
+
+        final dateStr = DateFormat('yyyy-MM-dd').format(day);
+
+        final booked = bookings
+            .where((b) => b['date'] == dateStr)
+            .map<String>((b) => b['slot'] as String)
+            .toSet();
+
+        setState(() {
+          bookedSlots = booked;
+        });
+      } else {
+        setState(() => bookedSlots = {});
+      }
+    } catch (e) {
+      debugPrint("Error fetching booked slots: $e");
+    }
+  }
+
+  void _generateTimeSlots(DateTime day) {
     List<String> slots = [];
 
     bool isWeekend = (day.weekday == DateTime.saturday || day.weekday == DateTime.sunday);
@@ -125,22 +157,12 @@ class _BookNowPageState extends State<BookNowPage> {
       slot = slotEnd;
     }
 
-    if (slots.isEmpty && fallback) {
-      DateTime tomorrow = day.add(const Duration(days: 1));
-      setState(() {
-        _selectedDay = tomorrow;
-        _focusedDay = tomorrow;
-      });
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        _generateTimeSlots(tomorrow, fallback: false);
-      });
-      return;
-    }
-
     setState(() {
       timeSlots = slots;
       selectedTimeIndex = -1;
     });
+
+    _fetchBookedSlots(day);
   }
 
   void _proceedToReview() {
@@ -172,12 +194,21 @@ class _BookNowPageState extends State<BookNowPage> {
       return;
     }
 
-    // Update provider with selected data
+    final selectedSlot = timeSlots[selectedTimeIndex];
+    if (bookedSlots.contains(selectedSlot)) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text("This slot is already booked! Choose another."),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
+
     final provider = context.read<BookingProvider>();
     provider.setSelectedServices(selectedServices);
-    provider.setDateTime(_selectedDay!, timeSlots[selectedTimeIndex]);
+    provider.setDateTime(_selectedDay!, selectedSlot);
 
-    // Navigate to review summary
     Navigator.push(
       context,
       MaterialPageRoute(
@@ -202,14 +233,13 @@ class _BookNowPageState extends State<BookNowPage> {
       ),
       body: Column(
         children: [
-          // Scrollable Content
           Expanded(
             child: SingleChildScrollView(
-              physics: const BouncingScrollPhysics(), // Better scrolling physics
+              physics: const BouncingScrollPhysics(),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // Services Section
+                  // SERVICES SECTION
                   Padding(
                     padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 8.h),
                     child: Text(
@@ -217,8 +247,6 @@ class _BookNowPageState extends State<BookNowPage> {
                       style: TextStyle(fontSize: 18.sp, fontWeight: FontWeight.bold),
                     ),
                   ),
-
-                  // Replace ListView.builder with Column and map
                   Padding(
                     padding: EdgeInsets.symmetric(horizontal: 10.w),
                     child: Column(
@@ -291,7 +319,7 @@ class _BookNowPageState extends State<BookNowPage> {
                     ),
                   ),
 
-                  // Date Selection
+                  // DATE SELECTION
                   Padding(
                     padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 8.h),
                     child: Text(
@@ -299,7 +327,6 @@ class _BookNowPageState extends State<BookNowPage> {
                       style: TextStyle(fontSize: 18.sp, fontWeight: FontWeight.bold),
                     ),
                   ),
-
                   Container(
                     padding: EdgeInsets.symmetric(horizontal: 12.w),
                     child: TableCalendar<dynamic>(
@@ -309,12 +336,11 @@ class _BookNowPageState extends State<BookNowPage> {
                       calendarFormat: CalendarFormat.month,
                       selectedDayPredicate: (day) => isSameDay(_selectedDay, day),
                       onDaySelected: (selectedDay, focusedDay) {
-                        if (!mounted) return;
                         setState(() {
                           _selectedDay = selectedDay;
                           _focusedDay = focusedDay;
-                          _generateTimeSlots(selectedDay);
                         });
+                        _generateTimeSlots(selectedDay);
                       },
                       calendarStyle: CalendarStyle(
                         todayDecoration: BoxDecoration(
@@ -335,7 +361,7 @@ class _BookNowPageState extends State<BookNowPage> {
                     ),
                   ),
 
-                  // Time Slots
+                  // TIME SLOTS
                   Padding(
                     padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 8.h),
                     child: Text(
@@ -343,12 +369,11 @@ class _BookNowPageState extends State<BookNowPage> {
                       style: TextStyle(fontSize: 18.sp, fontWeight: FontWeight.bold),
                     ),
                   ),
-
                   if (timeSlots.isEmpty)
                     Padding(
                       padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 4.h),
                       child: Text(
-                        "No slots available for this day. Please select another date.",
+                        "No slots available for this day.",
                         style: TextStyle(
                           fontSize: 14.sp,
                           fontWeight: FontWeight.w500,
@@ -364,8 +389,13 @@ class _BookNowPageState extends State<BookNowPage> {
                         padding: EdgeInsets.symmetric(horizontal: 12.w),
                         itemCount: timeSlots.length,
                         itemBuilder: (context, index) {
+                          final slot = timeSlots[index];
+                          final isBooked = bookedSlots.contains(slot);
+
                           return GestureDetector(
-                            onTap: () {
+                            onTap: isBooked
+                                ? null
+                                : () {
                               setState(() {
                                 selectedTimeIndex = index;
                               });
@@ -376,14 +406,25 @@ class _BookNowPageState extends State<BookNowPage> {
                               width: 150.w,
                               alignment: Alignment.center,
                               decoration: BoxDecoration(
-                                color: selectedTimeIndex == index ? Colors.orange : Colors.white,
-                                border: Border.all(color: Colors.orange, width: 2),
+                                color: isBooked
+                                    ? Colors.grey
+                                    : selectedTimeIndex == index
+                                    ? Colors.orange
+                                    : Colors.white,
+                                border: Border.all(
+                                  color: isBooked ? Colors.grey : Colors.orange,
+                                  width: 2,
+                                ),
                                 borderRadius: BorderRadius.circular(25.r),
                               ),
                               child: Text(
-                                timeSlots[index],
+                                slot,
                                 style: TextStyle(
-                                  color: selectedTimeIndex == index ? Colors.white : Colors.orange,
+                                  color: isBooked
+                                      ? Colors.white
+                                      : selectedTimeIndex == index
+                                      ? Colors.white
+                                      : Colors.orange,
                                   fontWeight: FontWeight.bold,
                                   fontSize: 12.sp,
                                 ),
@@ -394,13 +435,13 @@ class _BookNowPageState extends State<BookNowPage> {
                       ),
                     ),
 
-                  SizedBox(height: 100.h), // Extra bottom padding to ensure button doesn't overlap
+                  SizedBox(height: 100.h),
                 ],
               ),
             ),
           ),
 
-          // Static Continue Button
+          // Continue Button
           Container(
             padding: EdgeInsets.all(16.w),
             width: double.infinity,

@@ -44,7 +44,8 @@ class _ReviewSummaryState extends State<ReviewSummary> {
       final firestore = FirebaseFirestore.instance;
 
       // Fetch user profile
-      final userDoc = await firestore.collection("ProfileDetail").doc(user.uid).get();
+      final userDoc =
+      await firestore.collection("ProfileDetail").doc(user.uid).get();
       final userData = userDoc.data() ?? {};
 
       final userProfile = {
@@ -53,32 +54,48 @@ class _ReviewSummaryState extends State<ReviewSummary> {
         "mobile": userData['mobile'] ?? "No Phone",
       };
 
-      // Booking map for barber doc (includes status)
+      // 👇 Create allowedUserIds with both customer & barber
+      final allowedUserIds = [user.uid, provider.barber!.ownerUid];
+
+      // 👇 Generate unique bookingId
+      final bookingId =
+          "${user.uid}_${bookingData['placeId']}_${bookingData['slot']}_${bookingData['date']}";
+
+      // Booking map for barber doc
       final bookingForBarber = {
         ...bookingData,
-        "user": userProfile,
-        "status": false, // pending by default
+        "profile": userProfile,
+        "status": null, // pending by default
+        "allowedUserIds": allowedUserIds,
+        "bookingId": bookingId, // ✅ added bookingId
       };
 
-      // Booking map for user doc (includes status)
+      // Booking map for user doc
       final bookingForUser = {
         ...bookingData,
-        "status": false, // pending by default
+        "status": null, // pending by default
+        "allowedUserIds": allowedUserIds,
+        "bookingId": bookingId, // ✅ added bookingId
       };
 
       // Save under Barber's document
-      await firestore.collection("BookedSlots").doc(provider.barber!.placeId).set({
-        "placeId": provider.barber!.placeId,
+      await firestore
+          .collection("BookedSlots")
+          .doc(provider.barber!.ownerUid)
+          .set({
+        "ownerUid": provider.barber!.ownerUid,
         "shopName": provider.barber!.name,
         "bookings": FieldValue.arrayUnion([bookingForBarber]),
+        "allowedUserIds": allowedUserIds, // 👈 added here
         "updatedAt": FieldValue.serverTimestamp(),
       }, SetOptions(merge: true));
 
       // Save under User's document
       await firestore.collection("BookedSlots").doc(user.uid).set({
         "userId": user.uid,
-        "profile": userProfile,
+        "user": userProfile,
         "bookings": FieldValue.arrayUnion([bookingForUser]),
+        "allowedUserIds": allowedUserIds, // 👈 added here
         "updatedAt": FieldValue.serverTimestamp(),
       }, SetOptions(merge: true));
 
@@ -92,7 +109,6 @@ class _ReviewSummaryState extends State<ReviewSummary> {
       );
 
       Navigator.of(context).popUntil((route) => route.isFirst);
-
     } catch (e) {
       print("❌ Error confirming booking: $e");
       ScaffoldMessenger.of(context).showSnackBar(
@@ -107,8 +123,6 @@ class _ReviewSummaryState extends State<ReviewSummary> {
       });
     }
   }
-
-
 
   @override
   Widget build(BuildContext context) {
@@ -126,12 +140,14 @@ class _ReviewSummaryState extends State<ReviewSummary> {
               ),
               title: const Text(
                 "Review Summary",
-                style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold),
+                style:
+                TextStyle(color: Colors.black, fontWeight: FontWeight.bold),
               ),
               centerTitle: true,
             ),
             body: const Center(
-              child: Text("No booking data found. Please go back and complete your booking."),
+              child: Text(
+                  "No booking data found. Please go back and complete your booking."),
             ),
           );
         }
@@ -153,7 +169,8 @@ class _ReviewSummaryState extends State<ReviewSummary> {
             ),
             title: const Text(
               "Review Summary",
-              style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold),
+              style:
+              TextStyle(color: Colors.black, fontWeight: FontWeight.bold),
             ),
             centerTitle: true,
           ),
@@ -175,11 +192,21 @@ class _ReviewSummaryState extends State<ReviewSummary> {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            _DetailRow(title: "Salon Name", value: barber.name ?? "Unknown Salon"),
-                            _DetailRow(title: "Address", value: barber.address ?? "No address provided"),
-                            _DetailRow(title: "Phone", value: barber.phone ?? "No phone provided"),
-                            _DetailRow(title: "Booking Date", value: DateFormat('MMMM dd, yyyy').format(selectedDate)),
-                            _DetailRow(title: "Booking Slot", value: selectedSlot),
+                            _DetailRow(
+                                title: "Salon Name",
+                                value: barber.name ?? "Unknown Salon"),
+                            _DetailRow(
+                                title: "Address",
+                                value: barber.address ?? "No address provided"),
+                            _DetailRow(
+                                title: "Phone",
+                                value: barber.phone ?? "No phone provided"),
+                            _DetailRow(
+                                title: "Booking Date",
+                                value: DateFormat('MMMM dd, yyyy')
+                                    .format(selectedDate)),
+                            _DetailRow(
+                                title: "Booking Slot", value: selectedSlot),
                           ],
                         ),
                       ),
@@ -200,7 +227,10 @@ class _ReviewSummaryState extends State<ReviewSummary> {
                               price: "₹${service['price']}",
                             )),
                             const Divider(thickness: 1),
-                            _PriceRow(service: "Total", price: "₹$totalPrice", isTotal: true),
+                            _PriceRow(
+                                service: "Total",
+                                price: "₹$totalPrice",
+                                isTotal: true),
                           ],
                         ),
                       ),

@@ -81,7 +81,6 @@ class _BookedSlotState extends State<BookedSlot> {
                       final shopAddress = booking['shopAddress'] ?? "-";
                       final slot = booking['slot'] ?? "-";
                       final date = booking['date'] ?? "-";
-                      final selected_status = booking['selected_status'] ?? " ";
                       final services = booking['services'] as List<dynamic>? ?? [];
 
                       return Card(
@@ -139,24 +138,24 @@ class _BookedSlotState extends State<BookedSlot> {
                                 width: double.infinity,
                                 padding: const EdgeInsets.symmetric(vertical: 10),
                                 decoration: BoxDecoration(
-                                  color: (booking['selected_status'] == true)
+                                  color: (booking['status'] == true)
                                       ? Colors.green.shade100
-                                      : (booking['selected_status'] == false && booking['cancelled'] == true)
+                                      : (booking['status'] == false && booking['cancelled'] == true)
                                       ? Colors.red.shade100
                                       : Colors.orange.shade100,
                                   borderRadius: BorderRadius.circular(8),
                                 ),
                                 child: Center(
                                   child: Text(
-                                    (booking['selected_status'] == true)
+                                    (booking['status'] == true)
                                         ? "✅ Your slot is confirmed by barber"
                                         : (booking['status'] == false && booking['cancelled'] == true)
                                         ? "❌ Booking has been canceled by the barber"
                                         : "⏳ Waiting for barber acceptance",
                                     style: TextStyle(
-                                      color: (booking['selected_status'] == true)
+                                      color: (booking['status'] == true)
                                           ? Colors.green.shade800
-                                          : (booking['selected_status'] == false && booking['cancelled'] == true)
+                                          : (booking['status'] == false && booking['cancelled'] == true)
                                           ? Colors.red.shade800
                                           : Colors.orange.shade800,
                                       fontWeight: FontWeight.w600,
