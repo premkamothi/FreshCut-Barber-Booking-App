@@ -1,7 +1,7 @@
 import 'dart:convert';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:flutter/material.dart';
+import 'package:flutter/material.dart' hide Notification;
 import 'package:http/http.dart' as http;
 import 'package:project_sem7/uiscreen/ProfileUpdate.dart';
 import '../models/barber_model.dart';
@@ -11,6 +11,7 @@ import 'barber_card_list.dart';
 import 'package:geolocator/geolocator.dart';
 import 'city_barber_list_screen.dart';
 import 'notification.dart';
+import 'Login.dart'; // ✅ Make sure your Login screen is imported
 
 class MainHomePage extends StatefulWidget {
   const MainHomePage({super.key});
@@ -27,7 +28,7 @@ class GooglePlacesService {
     final url = Uri.parse(
         'https://maps.googleapis.com/maps/api/place/nearbysearch/json'
             '?location=$userLat,$userLng'
-            '&radius=10000'
+            '&radius=5000'
             '&type=hair_care'
             '&keyword=barber'
             '&key=$_apiKey');
@@ -69,7 +70,6 @@ class GooglePlacesService {
         final docSnapshot = await docRef.get();
 
         if (!docSnapshot.exists) {
-          // ✅ Only create once, don’t update distance
           await docRef.set(barber.toMap());
         }
       }
@@ -80,21 +80,17 @@ class GooglePlacesService {
       throw Exception('Failed to load places: ${data['status']}');
     }
   }
-
-
 }
 
 Future<Position> _getCurrentPosition() async {
   bool serviceEnabled;
   LocationPermission permission;
 
-  // Check if location services are enabled
   serviceEnabled = await Geolocator.isLocationServiceEnabled();
   if (!serviceEnabled) {
     throw Exception('Location services are disabled.');
   }
 
-  // Check permissions
   permission = await Geolocator.checkPermission();
   if (permission == LocationPermission.denied) {
     permission = await Geolocator.requestPermission();
@@ -107,18 +103,8 @@ Future<Position> _getCurrentPosition() async {
     throw Exception('Location permissions are permanently denied.');
   }
 
-  // Get current position
   return await Geolocator.getCurrentPosition(
       desiredAccuracy: LocationAccuracy.high);
-}
-
-void getLocation() async {
-  try {
-    Position position = await _getCurrentPosition();
-    print('Lat: ${position.latitude}, Lng: ${position.longitude}');
-  } catch (e) {
-    print('Error: $e');
-  }
 }
 
 Future<String> getCityFromCoordinates(double lat, double lng) async {
@@ -135,26 +121,71 @@ Future<String> getCityFromCoordinates(double lat, double lng) async {
       for (var component in result['address_components']) {
         final types = component['types'];
         if (types.contains('locality')) {
-          return component['long_name']; // City
+          return component['long_name'];
         } else if (types.contains('administrative_area_level_2')) {
-          return component['long_name']; // District fallback
+          return component['long_name'];
         }
       }
     }
-
-    // Fallback to formatted address if no city found
     return data['results'][0]['formatted_address'].split(',')[0];
   } else {
-    print('Geocoding failed: ${data['status']}');
-    print(jsonEncode(data)); // Optional: see full response in debug console
     throw Exception("Failed to fetch city");
   }
 }
 
 class _MainHomePageState extends State<MainHomePage> {
   late Future<List<BarberModel>> _barberFuture;
-  final List<String> _services = ["All", "Service 1", "Service 2", "Service 3"];
+  final List<String> _services = ["All"];
   String _selectedService = "All";
+
+  @override
+  void initState() {
+    super.initState();
+
+    // ✅ Start location + barbers loading
+    _barberFuture = _getCurrentPosition()
+        .then((position) => GooglePlacesService()
+        .getNearbyBarbers(position.latitude, position.longitude))
+        .catchError((e) {
+      return <BarberModel>[];
+    });
+
+    // ✅ Check if blocked on app start
+    _checkBlockedStatus();
+  }
+
+  Future<void> _checkBlockedStatus() async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) return;
+
+    try {
+      final doc = await FirebaseFirestore.instance
+          .collection("BookedSlots")
+          .doc(user.uid)
+          .get();
+
+      if (doc.exists && doc.data()?['blocked'] == true) {
+        await FirebaseAuth.instance.signOut();
+
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text("🚫 Your account has been blocked."),
+              backgroundColor: Colors.red,
+            ),
+          );
+
+          Navigator.pushAndRemoveUntil(
+            context,
+            MaterialPageRoute(builder: (context) => const Login()),
+                (route) => false,
+          );
+        }
+      }
+    } catch (e) {
+      print("Error checking blocked status: $e");
+    }
+  }
 
   Widget _buildServiceButton(String label) {
     final isSelected = _selectedService == label;
@@ -165,14 +196,13 @@ class _MainHomePageState extends State<MainHomePage> {
         onPressed: () {
           setState(() {
             _selectedService = label;
-            // TODO: Apply filter to the barber list based on label
           });
         },
         style: ElevatedButton.styleFrom(
           backgroundColor: isSelected ? Colors.orangeAccent : Colors.white,
           foregroundColor: isSelected ? Colors.white : Colors.orangeAccent,
           elevation: 0,
-          side: BorderSide(
+          side: const BorderSide(
             color: Colors.orangeAccent,
             width: 2.8,
           ),
@@ -188,40 +218,20 @@ class _MainHomePageState extends State<MainHomePage> {
 
   String _getGreetingMessage(String userName) {
     final hour = DateTime.now().hour;
-    String greeting;
-    String emoji;
-
     if (hour >= 5 && hour < 12) {
-      greeting = "Morning";
-      emoji = "🌅";
+      return "Morning, ${_capitalize(userName)} 🌅";
     } else if (hour >= 12 && hour < 17) {
-      greeting = "Afternoon";
-      emoji = "☀️";
+      return "Afternoon, ${_capitalize(userName)} ☀️";
     } else if (hour >= 17 && hour < 21) {
-      greeting = "Evening";
-      emoji = "🌇";
+      return "Evening, ${_capitalize(userName)} 🌇";
     } else {
-      greeting = "Night";
-      emoji = "🌙";
+      return "Night, ${_capitalize(userName)} 🌙";
     }
-    return "$greeting, ${_capitalize(userName)} $emoji";
   }
 
   String _capitalize(String name) {
     if (name.isEmpty) return '';
     return name[0].toUpperCase() + name.substring(1);
-  }
-
-  @override
-  void initState() {
-    super.initState();
-    _barberFuture = _getCurrentPosition()
-        .then((position) => GooglePlacesService()
-        .getNearbyBarbers(position.latitude, position.longitude))
-        .catchError((e) {
-      print('Location error: $e');
-      return <BarberModel>[];
-    });
   }
 
   @override
@@ -232,12 +242,10 @@ class _MainHomePageState extends State<MainHomePage> {
         toolbarHeight: 100,
         backgroundColor: Colors.white,
         elevation: 0,
-        surfaceTintColor: Colors.transparent,
         automaticallyImplyLeading: false,
         title: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Top Row
             Row(
               children: [
                 SizedBox(
@@ -248,23 +256,21 @@ class _MainHomePageState extends State<MainHomePage> {
                 ),
                 const SizedBox(width: 10),
                 const Text(
-                  "The Barber",
+                  "FreshCut",
                   style: TextStyle(fontWeight: FontWeight.bold, fontSize: 20),
                 ),
                 const Spacer(),
                 IconButton(
                   onPressed: () {
                     Navigator.push(context,
-                        MaterialPageRoute(builder: (context) => Notifications()));
+                        MaterialPageRoute(builder: (context) => NotificationScreen()));
                   },
                   icon: const Icon(Icons.notifications_active_outlined),
                 ),
                 IconButton(
                   onPressed: () {
-                    Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                            builder: (context) => Profileupdate()));
+                    Navigator.push(context,
+                        MaterialPageRoute(builder: (context) => Profileupdate()));
                   },
                   icon: const Icon(Icons.account_circle_outlined),
                 ),
@@ -277,7 +283,7 @@ class _MainHomePageState extends State<MainHomePage> {
                   .doc(FirebaseAuth.instance.currentUser!.uid)
                   .snapshots(),
               builder: (context, snapshot) {
-                if (!snapshot.hasData) return SizedBox();
+                if (!snapshot.hasData) return const SizedBox();
                 final userName = snapshot.data!['name'] ?? '';
                 return Text(
                   _getGreetingMessage(userName),
@@ -303,28 +309,21 @@ class _MainHomePageState extends State<MainHomePage> {
               physics: const BouncingScrollPhysics(),
               padding: const EdgeInsets.only(bottom: 20),
               children: [
-                // Search bar
                 Padding(
-                  padding: const EdgeInsets.only(left: 10, right: 10, top: 6),
-                  child: SizedBox(
-                    width: MediaQuery.of(context).size.width * 1.0,
-                    child: CustomSearchBar(
-                      controller: TextEditingController(),
-                      onChanged: (value) {
-                        // Filtering logic (if needed)
-                      },
-                    ),
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                  child: CustomSearchBar(
+                    controller: TextEditingController(),
+                    onChanged: (value) {},
                   ),
                 ),
-
                 Padding(
-                  padding: const EdgeInsets.only(left: 12, right: 12, top: 4),
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
                   child: Row(
                     children: [
                       const Text(
                         "Nearby Your Barber",
-                        style: TextStyle(
-                            fontSize: 16, fontWeight: FontWeight.bold),
+                        style:
+                        TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
                       ),
                       const Spacer(),
                       TextButton(
@@ -344,11 +343,10 @@ class _MainHomePageState extends State<MainHomePage> {
                               ),
                             );
                           } catch (e) {
-                            print("Error getting city: $e");
                             ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(
-                                  content: Text(
-                                      "Failed to fetch city. Please try again.")),
+                              const SnackBar(
+                                  content:
+                                  Text("Failed to fetch city. Please try again.")),
                             );
                           }
                         },
@@ -364,8 +362,6 @@ class _MainHomePageState extends State<MainHomePage> {
                     ],
                   ),
                 ),
-
-                //const SizedBox(height: 10),
                 SizedBox(
                   child: SingleChildScrollView(
                     scrollDirection: Axis.horizontal,
@@ -377,9 +373,7 @@ class _MainHomePageState extends State<MainHomePage> {
                     ),
                   ),
                 ),
-
                 BarberCardList(barbers: barbers),
-
                 const SizedBox(height: 20),
               ],
             );

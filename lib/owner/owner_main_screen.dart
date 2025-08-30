@@ -92,6 +92,7 @@ class _OwnerMainScreenState extends State<OwnerMainScreen> {
             Text(accepted ? "Booking Accepted ✅" : "Booking Declined ❌")),
       );
 
+      // Continue updating in user's document if accepted
       final userId = booking['userId'] as String;
       final userDocRef = firestore.collection("BookedSlots").doc(userId);
 
@@ -116,37 +117,122 @@ class _OwnerMainScreenState extends State<OwnerMainScreen> {
     }
   }
 
+
   Future<void> _updateArrivalStatus(
-      String docId, int bookingIndex, bool arrived) async {
+      String docId, String bookingId, bool accepted) async {
     try {
       final bookingDocRef = firestore.collection("BookedSlots").doc(docId);
-
       final snapshot = await bookingDocRef.get();
       if (!snapshot.exists) return;
 
       final data = snapshot.data()!;
-      final bookings = List.from(data['bookings'] ?? []);
-      if (bookingIndex < 0 || bookingIndex >= bookings.length) return;
+      final allowedUserIds = List<String>.from(data['allowedUserIds'] ?? []);
 
-      final booking = bookings[bookingIndex];
-      booking['arrived'] = arrived;
+      final currentUserId = FirebaseAuth.instance.currentUser!.uid;
+      if (!allowedUserIds.contains(currentUserId)) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text("You are not authorized to update this booking"),
+          ),
+        );
+        return;
+      }
+
+      // ✅ Update booking for owner
+      List bookings = List.from(data['bookings'] ?? []);
+      int ownerBookingIndex =
+      bookings.indexWhere((b) => (b['bookingId'] ?? "") == bookingId);
+
+      if (ownerBookingIndex == -1) return;
+
+      bookings[ownerBookingIndex]['arrived'] = accepted;
+      final booking = Map<String, dynamic>.from(bookings[ownerBookingIndex]);
 
       await bookingDocRef.update({
         'bookings': bookings,
         'updatedAt': FieldValue.serverTimestamp(),
       });
 
-      setState(() => processedBookings
-          .add("${booking['slot']}-${booking['date']}-${booking['userId']}"));
-
+      setState(() => processedBookings.add(bookingId));
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-            content: Text(arrived
+          content: Text(
+            accepted
                 ? "Customer has been visited ✅"
-                : "Customer not on time ❌")),
+                : "Customer not on time ❌",
+          ),
+        ),
       );
+
+      // ✅ Mirror update on customer side
+      final userId = booking['userId'] as String;
+      final userDocRef = firestore.collection("BookedSlots").doc(userId);
+
+      final userSnapshot = await userDocRef.get();
+      if (!userSnapshot.exists) return;
+
+      final userData = userSnapshot.data()!;
+      List userBookings = List.from(userData['bookings'] ?? []);
+
+      int userBookingIndex =
+      userBookings.indexWhere((b) => (b['bookingId'] ?? "") == bookingId);
+
+      if (userBookingIndex != -1) {
+        userBookings[userBookingIndex]['arrived'] = accepted;
+        await userDocRef.update({
+          'bookings': userBookings,
+          'updatedAt': FieldValue.serverTimestamp(),
+        });
+      }
+
+      // ✅ Missed visits logic
+      int missedCount = userData['missedCount'] ?? 0;
+      const int maxMissed = 2;
+
+      if (!accepted) {
+        missedCount++;
+
+        if (missedCount >= maxMissed) {
+          // 🚫 Block account on 2nd miss
+          await userDocRef.update({
+            'missedCount': missedCount,
+            'blocked': true,
+          });
+
+          await userDocRef.update({
+            'title': "Account Blocked 🚫",
+            'body':
+            "Your account has been blocked because you missed $missedCount visits.",
+            'createdAt': FieldValue.serverTimestamp(),
+          });
+        } else if (missedCount == maxMissed - 1) {
+          // ⚠️ Send final warning on 1st miss
+          await userDocRef.update({'missedCount': missedCount});
+
+          await userDocRef.update({
+            'title': "Final Warning ⚠️",
+            'body':
+            "This is your last chance! If you miss another visit, your account will be blocked.",
+            'createdAt': FieldValue.serverTimestamp(),
+          });
+        }
+      } else {
+        // ✅ Reset missed count if the user arrived
+        await userDocRef.update({'missedCount': 0});
+      }
     } catch (e) {
-      debugPrint("Error updating arrival status: $e");
+      debugPrint("Error updating booking status: $e");
+    }
+  }
+
+  int _extractSlotStart(String? slot) {
+    if (slot == null || slot.isEmpty) return 0;
+    try {
+      // Expect format like "8-9", "09-10"
+      final parts = slot.split("-");
+      return int.tryParse(parts[0].trim()) ?? 0;
+    } catch (_) {
+      return 0;
     }
   }
 
@@ -173,19 +259,10 @@ class _OwnerMainScreenState extends State<OwnerMainScreen> {
                 ),
                 const SizedBox(width: 10),
                 const Text(
-                  "The Barber",
+                  "FreshCut",
                   style: TextStyle(fontWeight: FontWeight.bold, fontSize: 20),
                 ),
                 const Spacer(),
-                IconButton(
-                  onPressed: () {
-                    Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                            builder: (context) => Notifications()));
-                  },
-                  icon: const Icon(Icons.notifications_active_outlined),
-                ),
                 IconButton(
                   onPressed: () {
                     Navigator.push(
@@ -228,7 +305,8 @@ class _OwnerMainScreenState extends State<OwnerMainScreen> {
 
           final ownerUid = snapshot.data!;
           return StreamBuilder<DocumentSnapshot>(
-            stream: firestore.collection("BookedSlots").doc(ownerUid).snapshots(),
+            stream:
+            firestore.collection("BookedSlots").doc(ownerUid).snapshots(),
             builder: (context, snapshot) {
               if (snapshot.connectionState == ConnectionState.waiting) {
                 return const Center(child: CircularProgressIndicator());
@@ -254,68 +332,65 @@ class _OwnerMainScreenState extends State<OwnerMainScreen> {
                 return booking['date'] == todayStr && booking['status'] == true;
               }).toList();
 
+              todayAccepted.sort((a, b) =>
+                  _extractSlotStart(a['slot']).compareTo(_extractSlotStart(b['slot'])));
+
               return Column(
                 children: [
-                  Container(
-                    width: double.infinity,
-                    padding: const EdgeInsets.all(16),
-                    decoration: BoxDecoration(
-                      color: Colors.orange.shade50,
-                      border: Border(
-                        bottom: BorderSide(color: Colors.grey.shade300),
-                      ),
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text("Today's Accepted Bookings: ${todayAccepted.length}",
-                            style: const TextStyle(
-                                fontSize: 18, fontWeight: FontWeight.bold)),
-                        const SizedBox(height: 8),
-                        if (todayAccepted.isEmpty)
-                          const Text("No accepted bookings yet",
-                              style: TextStyle(color: Colors.grey))
-                        else
-                          Column(
-                            children: todayAccepted.map((b) {
-                              final profile =
-                              (b['profile'] ?? {}) as Map<String, dynamic>;
-                              final name = profile['name'] ?? "Unknown";
-                              final mobile = profile['mobile'] ?? "N/A";
-                              final slot = b['slot'] ?? "-";
-
-                              return Padding(
-                                padding:
-                                const EdgeInsets.symmetric(vertical: 4),
-                                child: Row(
-                                  children: [
-                                    const Icon(Icons.person,
-                                        size: 16, color: Colors.orange),
-                                    const SizedBox(width: 6),
-                                    Expanded(
-                                      child: Text("$name | $mobile",
-                                          style:
-                                          const TextStyle(fontSize: 14)),
-                                    ),
-                                    const Icon(Icons.access_time,
-                                        size: 16, color: Colors.orange),
-                                    const SizedBox(width: 6),
-                                    Text(slot,
-                                        style: const TextStyle(
-                                            fontWeight: FontWeight.w500)),
-                                  ],
-                                ),
-                              );
-                            }).toList(),
-                          ),
-                      ],
-                    ),
-                  ),
                   Expanded(
                     child: ListView.builder(
                       padding: const EdgeInsets.all(16),
-                      itemCount: bookings.length,
+                      itemCount: bookings.length + 1, // extra slot for summary
                       itemBuilder: (context, index) {
+                        if (index == bookings.length) {
+                          // 🔹 Today's Accepted Bookings (sorted correctly)
+                          return Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const Text(
+                                "Today's Accepted Bookings",
+                                style: TextStyle(
+                                    fontSize: 18, fontWeight: FontWeight.bold),
+                              ),
+                              const SizedBox(height: 12),
+                              if (todayAccepted.isEmpty)
+                                const Text("No accepted bookings yet",
+                                    style: TextStyle(color: Colors.grey)),
+                              ...todayAccepted.map((b) {
+                                final booking = b as Map<String, dynamic>;
+                                final profile =
+                                (booking['profile'] ?? {}) as Map<String, dynamic>;
+
+                                return Card(
+                                  margin: const EdgeInsets.only(bottom: 12),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                  elevation: 2,
+                                  child: ListTile(
+                                    leading: const Icon(Icons.person,
+                                        color: Colors.orange),
+                                    title: Text(
+                                      profile['name'] ?? "No Name",
+                                      style: const TextStyle(
+                                          fontWeight: FontWeight.bold),
+                                    ),
+                                    subtitle: Column(
+                                      crossAxisAlignment:
+                                      CrossAxisAlignment.start,
+                                      children: [
+                                        Text(profile['mobile'] ?? "No Phone"),
+                                        Text("Slot: ${booking['slot'] ?? "-"}"),
+                                      ],
+                                    ),
+                                  ),
+                                );
+                              }).toList(),
+                            ],
+                          );
+                        }
+
+                        // 🔹 Other bookings section (unchanged)
                         final booking =
                         bookings[index] as Map<String, dynamic>;
                         final bookingId =
@@ -404,7 +479,8 @@ class _OwnerMainScreenState extends State<OwnerMainScreen> {
                                       ),
                                       child: Text(
                                           "${s['name']} - ₹${s['price']}",
-                                          style: const TextStyle(fontSize: 12)),
+                                          style:
+                                          const TextStyle(fontSize: 12)),
                                     );
                                   }).toList(),
                                 ),
@@ -475,7 +551,7 @@ class _OwnerMainScreenState extends State<OwnerMainScreen> {
                                           ),
                                           onPressed: () =>
                                               _updateArrivalStatus(
-                                                  ownerUid, index, true),
+                                                  ownerUid, booking['bookingId'], true),
                                           child: const Text("Customer visited",
                                               style: TextStyle(fontSize: 16)),
                                         ),
@@ -494,7 +570,7 @@ class _OwnerMainScreenState extends State<OwnerMainScreen> {
                                           ),
                                           onPressed: () =>
                                               _updateArrivalStatus(
-                                                  ownerUid, index, false),
+                                                  ownerUid, booking['bookingId'], false),
                                           child: const Text("Not on time",
                                               style: TextStyle(fontSize: 16)),
                                         ),

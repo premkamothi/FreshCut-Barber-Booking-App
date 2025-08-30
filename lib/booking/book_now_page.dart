@@ -209,7 +209,7 @@ class _BookNowPageState extends State<BookNowPage> {
     provider.setSelectedServices(selectedServices);
     provider.setDateTime(_selectedDay!, selectedSlot);
 
-    Navigator.push(
+    Navigator.pushReplacement(
       context,
       MaterialPageRoute(
         builder: (_) => ReviewSummary(),

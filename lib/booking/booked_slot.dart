@@ -149,7 +149,7 @@ class _BookedSlotState extends State<BookedSlot> {
                                   child: Text(
                                     (booking['status'] == true)
                                         ? "✅ Your slot is confirmed by barber"
-                                        : (booking['status'] == false && booking['cancelled'] == true)
+                                        : (booking['status'] == false)
                                         ? "❌ Booking has been canceled by the barber"
                                         : "⏳ Waiting for barber acceptance",
                                     style: TextStyle(

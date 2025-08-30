@@ -25,54 +25,6 @@ class _LoginState extends State<Login> {
   bool _isPasswordVisible = false;
   String? _authErrorMessage;
 
-  Future<void> _signInWithGoogle() async {
-    try {
-      final GoogleSignIn googleSignIn = GoogleSignIn();
-      await googleSignIn.signOut(); // Ensures fresh login
-      final GoogleSignInAccount? googleUser = await googleSignIn.signIn();
-      if (googleUser == null) return;
-
-      final GoogleSignInAuthentication googleAuth = await googleUser.authentication;
-      final credential = GoogleAuthProvider.credential(
-        accessToken: googleAuth.accessToken,
-        idToken: googleAuth.idToken,
-      );
-
-      // Sign in to Firebase
-      UserCredential userCredential = await FirebaseAuth.instance.signInWithCredential(credential);
-      final String uid = userCredential.user?.uid ?? '';
-
-      // Check if user profile exists in Firestore
-      final DocumentSnapshot doc = await FirebaseFirestore.instance
-          .collection('ProfileDetail')
-          .doc(uid)
-          .get();
-
-      final prefs = await SharedPreferences.getInstance();
-
-      if (doc.exists) {
-        // Profile already created, set logged in
-        await prefs.setBool('is_logged_in', true);
-        await prefs.setString('user_type', 'customer');
-        if (mounted) {
-          Navigator.pushReplacement(
-            context,
-            MaterialPageRoute(builder: (context) => BottomNavBar(initialIndex: 0)),
-          );
-        }
-      } else {
-        // First-time login, go to Profile screen
-        if (mounted) {
-          Navigator.pushReplacement(
-            context,
-            MaterialPageRoute(builder: (context) => const Profile()),
-          );
-        }
-      }
-    } catch (e) {
-    }
-  }
-
 
   @override
   Widget build(BuildContext context) {
@@ -90,7 +42,7 @@ class _LoginState extends State<Login> {
         body: SingleChildScrollView(
           child: Column(
             children: [
-              SizedBox(height: 50.h),
+              SizedBox(height: 80.h),
               Padding(
                 padding: EdgeInsets.only(left: 23.w),
                 child: Text(
@@ -254,28 +206,6 @@ class _LoginState extends State<Login> {
                             TextSpan(text: "Don't have an account?", style: TextStyle(fontSize: 14.sp,color: Colors.black)),
                             TextSpan(text: " Sign Up" ,style: TextStyle(color: Colors.orange,fontSize: 14.sp)),
                           ]
-                      )),
-                    ),
-                    SizedBox(height: 60.h),
-                    SizedBox(
-                      height: 40.h,
-                      width: 220.w,
-                      child: ElevatedButton(onPressed: _signInWithGoogle,
-                          child: Row(
-                            children: [
-                              SizedBox(width: 5.w),
-                              Image.asset("assets/images/google_logo.png",
-                              height: 25.h,
-                              width: 25.w),
-                              Text("Continue With Google", style: TextStyle(color: Colors.black,fontSize: 14.sp),)
-                            ],
-                          ),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.white,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(10.r),
-                          side: BorderSide(width: 1.w)
-                        )
                       )),
                     ),
                   ],

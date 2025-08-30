@@ -7,6 +7,7 @@ import 'package:google_sign_in/google_sign_in.dart';
 import 'package:project_sem7/Services.dart';
 import 'package:project_sem7/uiscreen/DashboardScreen.dart';
 import 'package:project_sem7/uiscreen/ForgetPassword.dart';
+import 'package:project_sem7/uiscreen/NavBar.bart.dart';
 import 'package:project_sem7/uiscreen/RegisterPage.dart';
 import 'package:project_sem7/uiscreen/Signupowner.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -26,57 +27,6 @@ class _LoginStateowner extends State<Loginowner> {
   bool _isPasswordVisible = false;
   String? _authErrorMessage;
 
-  Future<void> _signInWithGoogle() async {
-    try {
-      final GoogleSignIn googleSignIn = GoogleSignIn();
-      await googleSignIn.signOut(); // Ensure fresh login
-      final GoogleSignInAccount? googleUser = await googleSignIn.signIn();
-      if (googleUser == null) return;
-
-      final GoogleSignInAuthentication googleAuth = await googleUser.authentication;
-      final credential = GoogleAuthProvider.credential(
-        accessToken: googleAuth.accessToken,
-        idToken: googleAuth.idToken,
-      );
-
-      // Sign in to Firebase
-      UserCredential userCredential = await FirebaseAuth.instance.signInWithCredential(credential);
-      final String email = userCredential.user?.email ?? '';
-
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.setBool('is_logged_in', true);
-      await prefs.setString('user_type', 'owner');
-
-      // Check if email already exists in BarberShops
-      final query = await FirebaseFirestore.instance
-          .collection('BarberShops')
-          .where('email', isEqualTo: email)
-          .get();
-
-      if (query.docs.isNotEmpty) {
-        // ✅ Email already exists → user is already registered
-        if (mounted) {
-          Navigator.pushReplacement(
-            context,
-            MaterialPageRoute(builder: (context) => BottomNavBar(initialIndex: 0)),
-          );
-        }
-      } else {
-        // ❌ Email not found → user needs to register
-        if (mounted) {
-          Navigator.pushReplacement(
-            context,
-            MaterialPageRoute(builder: (context) => const Registerpage()),
-          );
-        }
-      }
-    } catch (e) {
-      debugPrint("Google Sign-in failed: $e");
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Google Sign-in failed")),
-      );
-    }
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -94,7 +44,7 @@ class _LoginStateowner extends State<Loginowner> {
         body: SingleChildScrollView(
           child: Column(
             children: [
-              SizedBox(height: 50.h),
+              SizedBox(height: 80.h),
               Padding(
                 padding: const EdgeInsets.only(left: 23),
                 child: Text(
@@ -220,7 +170,7 @@ class _LoginStateowner extends State<Loginowner> {
                               if (mounted) {
                                 Navigator.pushReplacement(
                                   context,
-                                  MaterialPageRoute(builder: (context) => const BottomNavBar(initialIndex:0)),
+                                  MaterialPageRoute(builder: (context) => NavBar(),)
                                 );
                               }
                             } on FirebaseAuthException catch (e) {
@@ -260,35 +210,6 @@ class _LoginStateowner extends State<Loginowner> {
                             TextSpan(text: " Sign up" ,style: TextStyle(color: Colors.orange,fontSize: 14.sp)),
                           ]
                       )),
-                    ),
-                    SizedBox(height: 60.h),
-                    SizedBox(
-                      height: 40.h,
-                      width: 220.w,
-                      child: ElevatedButton(
-                        onPressed: _signInWithGoogle,
-                        child: Row(
-                          children: [
-                            SizedBox(width: 5.w),
-                            Image.asset(
-                              "assets/images/google_logo.png",
-                              height: 25.h,
-                              width: 25.w,
-                            ),
-                            Text(
-                              "Continue with Google",
-                              style: TextStyle(color: Colors.black, fontSize: 14.sp),
-                            ),
-                          ],
-                        ),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.white,
-                          side: BorderSide(width: 1.w),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(10.r)
-                          )
-                        )
-                      ),
                     ),
                   ],
                 ),

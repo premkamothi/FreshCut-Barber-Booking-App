@@ -4,6 +4,7 @@ import 'package:project_sem7/uiscreen/Login.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'NavBar.bart.dart';
 import 'bottom_nav_bar.dart';
 
 class Profile extends StatefulWidget {
@@ -170,11 +171,20 @@ class _ProfileState extends State<Profile> {
           const SnackBar(content: Text('Profile saved successfully!')),
         );
 
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(builder: (context) => const BottomNavBar(initialIndex: 0)),
-        );
-      }
+
+          if (ownerRole) { // Since this is owner signup, ownerRole is always true
+            Navigator.pushReplacement(
+              context,
+              MaterialPageRoute(builder: (context) => const NavBar()),
+            );
+          } else {
+            Navigator.pushReplacement(
+              context,
+              MaterialPageRoute(builder: (context) => const BottomNavBar(initialIndex: 0)),
+            );
+          }
+        }
+
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(

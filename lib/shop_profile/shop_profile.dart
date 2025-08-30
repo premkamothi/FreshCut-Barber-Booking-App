@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:http/http.dart' as http;
 import 'package:url_launcher/url_launcher.dart';
@@ -29,12 +30,31 @@ class _ShopProfileState extends State<ShopProfile> {
   bool isLoading = true;
   Position? _cachedPosition;
   List<String> _shopImages = [];
+  bool? _isRegistered; // Track registration state
 
   @override
   void initState() {
     super.initState();
+    _checkRegistration();
     _fetchShopDetails();
     _getCurrentLocation().then((pos) => _cachedPosition = pos);
+  }
+
+  Future<void> _checkRegistration() async {
+    try {
+      final doc = await FirebaseFirestore.instance
+          .collection('RegisteredShops')
+          .doc(widget.barberData?.placeId)
+          .get();
+
+      setState(() {
+        _isRegistered = doc.exists;
+      });
+    } catch (e) {
+      setState(() {
+        _isRegistered = false;
+      });
+    }
   }
 
   Future<void> _fetchShopDetails() async {
@@ -55,7 +75,6 @@ class _ShopProfileState extends State<ShopProfile> {
 
       setState(() {
         mergedBarber = MergedBarber.from(apiBarber!, firebaseProfile);
-        // fetch shopPhotos for image carousel, excluding first image
         _shopImages = firebaseProfile?.shopPhotos ?? [];
         isLoading = false;
       });
@@ -89,371 +108,7 @@ class _ShopProfileState extends State<ShopProfile> {
     }
   }
 
-  @override
-  Widget build(BuildContext context) {
-    final barber = widget.barberData;
-    return Scaffold(
-      backgroundColor: Colors.white,
-      body: Stack(
-        children: [
-          Positioned.fill(
-            child: SingleChildScrollView(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // Image carousel
-                  SizedBox(
-                    height: 256,
-                    child: Stack(
-                      alignment: Alignment.bottomCenter,
-                      children: [
-                        PageView(
-                          controller: _pageController,
-                          onPageChanged: (index) {
-                            setState(() {
-                              _currentPage = index;
-                            });
-                          },
-                          children: [
-                            _buildImageCard(barber?.imageUrl ?? 'assets/images/image1.jpg'),
-                            for (String imageUrl in _shopImages)
-                              _buildImageCard(imageUrl),
-                          ],
-                        ),
-                        Positioned(
-                          bottom: 10,
-                          child: Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: List.generate(
-                              (_shopImages.length + 1),
-                                  (index) => AnimatedContainer(
-                                duration: const Duration(milliseconds: 300),
-                                margin: const EdgeInsets.symmetric(horizontal: 4),
-                                height: 8,
-                                width: _currentPage == index ? 20 : 8,
-                                decoration: BoxDecoration(
-                                  color: _currentPage == index
-                                      ? Colors.orangeAccent
-                                      : Colors.grey[400],
-                                  borderRadius: BorderRadius.circular(12),
-                                ),
-                              ),
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-
-                  const SizedBox(height: 20),
-
-                  // Shop Name
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 12),
-                    child: Text(
-                      mergedBarber?.name ?? barber?.name ?? "The Barber",
-                      style: const TextStyle(
-                        fontSize: 24,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ),
-
-                  const SizedBox(height: 10),
-
-                  // Location
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 12),
-                    child: Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const Padding(
-                          padding: EdgeInsets.only(top: 2),
-                          child: Icon(Icons.location_on, color: Colors.orangeAccent),
-                        ),
-                        const SizedBox(width: 5),
-                        Expanded(
-                          child: Text(
-                            mergedBarber?.address ?? barber?.address ?? "123 Main Street",
-                            style: TextStyle(fontSize: 16, color: Colors.grey[500]),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-
-                  const SizedBox(height: 8),
-
-                  // Distance
-                  if (barber != null)
-                    Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 12),
-                      child: Row(
-                        children: [
-                          const Icon(Icons.directions_walk,
-                              color: Colors.orangeAccent, size: 20),
-                          const SizedBox(width: 8),
-                          Text(
-                            "${barber.distanceKm.toStringAsFixed(1)} km away",
-                            style:
-                            TextStyle(fontSize: 14, color: Colors.grey[500]),
-                          ),
-                        ],
-                      ),
-                    ),
-
-                  const SizedBox(height: 8),
-
-                  // Ratings and Open/Closed
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 12),
-                    child: Row(
-                      children: [
-                        const Icon(Icons.star,
-                            color: Colors.orangeAccent, size: 20),
-                        const SizedBox(width: 8),
-                        Text(
-                          "${barber?.rating ?? 5.0}",
-                          style: TextStyle(fontSize: 14, color: Colors.grey[500]),
-                        ),
-                        const Spacer(),
-                        if (barber != null)
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                                horizontal: 8, vertical: 4),
-                            decoration: BoxDecoration(
-                              color: barber.openNow ? Colors.green : Colors.red,
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            child: Text(
-                              barber.openNow ? "Open Now" : "Closed",
-                              style: const TextStyle(
-                                color: Colors.white,
-                                fontSize: 12,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                          ),
-                      ],
-                    ),
-                  ),
-
-                  const SizedBox(height: 14),
-
-                  // Services & Actions Row
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 12),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        _buildServiceCircle(Icons.language, "Website", () async {
-                          if (mergedBarber?.website != null &&
-                              mergedBarber!.website!.isNotEmpty) {
-                            final Uri url = Uri.parse(
-                              mergedBarber!.website!.startsWith("http")
-                                  ? mergedBarber!.website!
-                                  : "https://${mergedBarber!.website!}",
-                            );
-                            await launchUrl(url,
-                                mode: LaunchMode.externalApplication);
-                          }
-                        }),
-                        _buildServiceCircle(Icons.design_services, "Services", () {
-                          if (mergedBarber != null) {
-                            _showServicesBottomSheet(context, mergedBarber!);
-                          }
-                        }),
-                        _buildServiceCircle(Icons.call, "Call", () {
-                          if (mergedBarber != null) {
-                            _showContactBottomSheet(context, mergedBarber!);
-                          }
-                        }),
-                        _buildServiceCircle(Icons.directions, "Direction", () async {
-                          if (barber != null) {
-                            await _openGoogleMaps(barber.lat, barber.lng);
-                          }
-                        }),
-                        _buildServiceCircle(Icons.info, "About Us", () {
-                          if (mergedBarber != null) {
-                            showModalBottomSheet(
-                              context: context,
-                              shape: const RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.vertical(
-                                      top: Radius.circular(20))),
-                              builder: (context) {
-                                return Padding(
-                                  padding: const EdgeInsets.all(16),
-                                  child: Column(
-                                    mainAxisSize: MainAxisSize.min,
-                                    crossAxisAlignment: CrossAxisAlignment.start,
-                                    children: [
-                                      Center(
-                                        child: Container(
-                                          width: 50,
-                                          height: 4,
-                                          decoration: BoxDecoration(
-                                            color: Colors.grey[300],
-                                            borderRadius: BorderRadius.circular(2),
-                                          ),
-                                        ),
-                                      ),
-                                      const SizedBox(height: 12),
-                                      Text(
-                                        "About ${mergedBarber!.name}",
-                                        style: const TextStyle(
-                                            fontSize: 20,
-                                            fontWeight: FontWeight.bold),
-                                      ),
-                                      const SizedBox(height: 10),
-                                      Text(
-                                        mergedBarber!.about ??
-                                            "No description available",
-                                        style: const TextStyle(
-                                            fontSize: 16, color: Colors.black87),
-                                      ),
-                                      const SizedBox(height: 16),
-                                    ],
-                                  ),
-                                );
-                              },
-                            );
-                          }
-                        }),
-                      ],
-                    ),
-                  ),
-
-
-                  Padding(
-                    padding: const EdgeInsets.only(right: 12, left: 12),
-                    child: Divider(color: Colors.grey[200]),
-                  ),
-
-                  const SizedBox(height: 8),
-
-                  // Working Hours
-                  Padding(
-                    padding: const EdgeInsets.only(right: 12, left: 12),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const Text(
-                          "Working Hours",
-                          style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                        ),
-                        const SizedBox(height: 8),
-                        if (isLoading)
-                          const Center(child: CircularProgressIndicator())
-                        else if (mergedBarber != null) ...[
-                          Row(
-                            children: [
-                              const Icon(Icons.calendar_today, size: 18, color: Colors.orangeAccent),
-                              const SizedBox(width: 8),
-                              Text(
-                                "Mon - Fri: ${mergedBarber?.monFriStart ?? "Not Available"} - ${mergedBarber?.monFriEnd ?? "Not Available"}",
-                                style: TextStyle(fontSize: 16, color: Colors.grey[700]),
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 6),
-                          Row(
-                            children: [
-                              const Icon(Icons.calendar_today, size: 18, color: Colors.orangeAccent),
-                              const SizedBox(width: 8),
-                              Text(
-                                "Sat - Sun: ${mergedBarber!.satSunStart ?? "Not Available"} - ${mergedBarber!.satSunEnd ?? "Not Available"}",
-                                style: TextStyle(fontSize: 16, color: Colors.grey[700]),
-                              ),
-                            ],
-                          ),
-                        ]
-                      ],
-                    ),
-                  ),
-
-                  // Specialists
-                  Padding(
-                    padding: const EdgeInsets.only(top: 16, right: 12, left: 12),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        const Text(
-                          "Our Specialists",
-                          style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                        ),
-                      ],
-                    ),
-                  ),
-
-                  const SizedBox(height: 10),
-
-                  SizedBox(
-                    height: 140,
-                    child: ListView(
-                      scrollDirection: Axis.horizontal,
-                      padding: const EdgeInsets.symmetric(horizontal: 12),
-                      children: [
-                        _buildSpecialistCard("assets/images/image1.jpg", "John Doe", "Sr. Barber"),
-                        _buildSpecialistCard("assets/images/image3.jpg", "Mike Trim", "Sr. Barber"),
-                        _buildSpecialistCard("assets/images/image2.jpg", "Alex Fade", "Jr. Barber"),
-                        _buildSpecialistCard("assets/images/image1.jpg", "Alex Fade", "Jr. Barber"),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(height: 120),
-                ],
-              ),
-            ),
-          ),
-
-          // Book Now Button
-          Positioned(
-            bottom: 0,
-            left: 0,
-            right: 0,
-            child: Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: Colors.grey[50],
-                borderRadius: const BorderRadius.only(
-                  topLeft: Radius.circular(20),
-                  topRight: Radius.circular(20),
-                ),
-              ),
-              child: SizedBox(
-                width: double.infinity,
-                height: 50,
-                child: ElevatedButton(
-                  onPressed: () {
-                    if (mergedBarber != null) {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                            builder: (_) =>
-                                BookNowPage(barber: mergedBarber!)),
-                      );
-                    }
-                  },
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.orange,
-                    shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(16)),
-                  ),
-                  child: const Text(
-                    "Book Now",
-                    style: TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.white),
-                  ),
-                ),
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
+  // ---------------- HELPER WIDGETS ---------------- //
 
   Widget _buildImageCard(String imageUrl) {
     return ClipRRect(
@@ -502,7 +157,8 @@ class _ShopProfileState extends State<ShopProfile> {
           const SizedBox(height: 6),
           Text(
             label,
-            style: const TextStyle(fontSize: 12, color: Colors.black, fontWeight: FontWeight.bold),
+            style: const TextStyle(
+                fontSize: 12, color: Colors.black, fontWeight: FontWeight.bold),
             textAlign: TextAlign.center,
           ),
         ],
@@ -560,8 +216,415 @@ class _ShopProfileState extends State<ShopProfile> {
       ),
     );
   }
-}
 
+  // ---------------- MAIN BUILD ---------------- //
+
+  @override
+  Widget build(BuildContext context) {
+    final barber = widget.barberData;
+    return Scaffold(
+      backgroundColor: Colors.white,
+      body: Stack(
+        children: [
+          Positioned.fill(
+            child: SingleChildScrollView(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Image carousel
+                  SizedBox(
+                    height: 256,
+                    child: Stack(
+                      alignment: Alignment.bottomCenter,
+                      children: [
+                        PageView(
+                          controller: _pageController,
+                          onPageChanged: (index) {
+                            setState(() {
+                              _currentPage = index;
+                            });
+                          },
+                          children: [
+                            _buildImageCard(
+                                barber?.imageUrl ?? 'assets/images/image1.jpg'),
+                            for (String imageUrl in _shopImages)
+                              _buildImageCard(imageUrl),
+                          ],
+                        ),
+                        Positioned(
+                          bottom: 10,
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: List.generate(
+                              (_shopImages.length + 1),
+                                  (index) => AnimatedContainer(
+                                duration: const Duration(milliseconds: 300),
+                                margin:
+                                const EdgeInsets.symmetric(horizontal: 4),
+                                height: 8,
+                                width: _currentPage == index ? 20 : 8,
+                                decoration: BoxDecoration(
+                                  color: _currentPage == index
+                                      ? Colors.orangeAccent
+                                      : Colors.grey[400],
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+
+                  const SizedBox(height: 20),
+
+                  // Shop Name
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 12),
+                    child: Text(
+                      mergedBarber?.name ?? barber?.name ?? "The Barber",
+                      style: const TextStyle(
+                        fontSize: 24,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+
+                  const SizedBox(height: 10),
+
+                  // Location
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 12),
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Padding(
+                          padding: EdgeInsets.only(top: 2),
+                          child: Icon(Icons.location_on,
+                              color: Colors.orangeAccent),
+                        ),
+                        const SizedBox(width: 5),
+                        Expanded(
+                          child: Text(
+                            mergedBarber?.address ??
+                                barber?.address ??
+                                "123 Main Street",
+                            style: TextStyle(
+                                fontSize: 16, color: Colors.grey[500]),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+
+                  const SizedBox(height: 8),
+
+                  // Distance
+                  if (barber != null)
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 12),
+                      child: Row(
+                        children: [
+                          const Icon(Icons.directions_walk,
+                              color: Colors.orangeAccent, size: 20),
+                          const SizedBox(width: 8),
+                          Text(
+                            "${barber.distanceKm.toStringAsFixed(1)} km away",
+                            style: TextStyle(
+                                fontSize: 14, color: Colors.grey[500]),
+                          ),
+                        ],
+                      ),
+                    ),
+
+                  const SizedBox(height: 8),
+
+                  // Ratings and Open/Closed
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 12),
+                    child: Row(
+                      children: [
+                        const Icon(Icons.star,
+                            color: Colors.orangeAccent, size: 20),
+                        const SizedBox(width: 8),
+                        Text(
+                          "${barber?.rating ?? 5.0}",
+                          style: TextStyle(
+                              fontSize: 14, color: Colors.grey[500]),
+                        ),
+                        const Spacer(),
+                        if (barber != null)
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 8, vertical: 4),
+                            decoration: BoxDecoration(
+                              color: barber.openNow ? Colors.green : Colors.red,
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: Text(
+                              barber.openNow ? "Open Now" : "Closed",
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 12,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ),
+                      ],
+                    ),
+                  ),
+
+                  const SizedBox(height: 14),
+
+                  // Services & Actions Row
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 12),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        _buildServiceCircle(Icons.language, "Website", () async {
+                          if (mergedBarber?.website != null &&
+                              mergedBarber!.website!.isNotEmpty) {
+                            final Uri url = Uri.parse(
+                              mergedBarber!.website!.startsWith("http")
+                                  ? mergedBarber!.website!
+                                  : "https://${mergedBarber!.website!}",
+                            );
+                            await launchUrl(url,
+                                mode: LaunchMode.externalApplication);
+                          }
+                        }),
+                        _buildServiceCircle(Icons.design_services, "Services",
+                                () {
+                              if (mergedBarber != null) {
+                                _showServicesBottomSheet(context, mergedBarber!);
+                              }
+                            }),
+                        _buildServiceCircle(Icons.call, "Call", () {
+                          if (mergedBarber != null) {
+                            _showContactBottomSheet(context, mergedBarber!);
+                          }
+                        }),
+                        _buildServiceCircle(Icons.directions, "Direction",
+                                () async {
+                              if (barber != null) {
+                                await _openGoogleMaps(barber.lat, barber.lng);
+                              }
+                            }),
+                        _buildServiceCircle(Icons.info, "About Us", () {
+                          if (mergedBarber != null) {
+                            showModalBottomSheet(
+                              context: context,
+                              shape: const RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.vertical(
+                                      top: Radius.circular(20))),
+                              builder: (context) {
+                                return Padding(
+                                  padding: const EdgeInsets.all(16),
+                                  child: Column(
+                                    mainAxisSize: MainAxisSize.min,
+                                    crossAxisAlignment:
+                                    CrossAxisAlignment.start,
+                                    children: [
+                                      Center(
+                                        child: Container(
+                                          width: 50,
+                                          height: 4,
+                                          decoration: BoxDecoration(
+                                            color: Colors.grey[300],
+                                            borderRadius:
+                                            BorderRadius.circular(2),
+                                          ),
+                                        ),
+                                      ),
+                                      const SizedBox(height: 12),
+                                      Text(
+                                        "About ${mergedBarber!.name}",
+                                        style: const TextStyle(
+                                            fontSize: 20,
+                                            fontWeight: FontWeight.bold),
+                                      ),
+                                      const SizedBox(height: 10),
+                                      Text(
+                                        mergedBarber!.about ??
+                                            "No description available",
+                                        style: const TextStyle(
+                                            fontSize: 16,
+                                            color: Colors.black87),
+                                      ),
+                                      const SizedBox(height: 16),
+                                    ],
+                                  ),
+                                );
+                              },
+                            );
+                          }
+                        }),
+                      ],
+                    ),
+                  ),
+
+                  Padding(
+                    padding: const EdgeInsets.only(right: 12, left: 12),
+                    child: Divider(color: Colors.grey[200]),
+                  ),
+
+                  const SizedBox(height: 8),
+
+                  // Working Hours
+                  Padding(
+                    padding: const EdgeInsets.only(right: 12, left: 12),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text(
+                          "Working Hours",
+                          style: TextStyle(
+                              fontSize: 18, fontWeight: FontWeight.bold),
+                        ),
+                        const SizedBox(height: 8),
+                        if (isLoading)
+                          const Center(child: CircularProgressIndicator())
+                        else if (mergedBarber != null) ...[
+                          Row(
+                            children: [
+                              const Icon(Icons.calendar_today,
+                                  size: 18, color: Colors.orangeAccent),
+                              const SizedBox(width: 8),
+                              Text(
+                                "Mon - Fri: ${mergedBarber?.monFriStart ?? "Not Available"} - ${mergedBarber?.monFriEnd ?? "Not Available"}",
+                                style: TextStyle(
+                                    fontSize: 16, color: Colors.grey[700]),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 6),
+                          Row(
+                            children: [
+                              const Icon(Icons.calendar_today,
+                                  size: 18, color: Colors.orangeAccent),
+                              const SizedBox(width: 8),
+                              Text(
+                                "Sat - Sun: ${mergedBarber!.satSunStart ?? "Not Available"} - ${mergedBarber!.satSunEnd ?? "Not Available"}",
+                                style: TextStyle(
+                                    fontSize: 16, color: Colors.grey[700]),
+                              ),
+                            ],
+                          ),
+                        ]
+                      ],
+                    ),
+                  ),
+
+                  // Specialists
+                  Padding(
+                    padding:
+                    const EdgeInsets.only(top: 16, right: 12, left: 12),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        const Text(
+                          "Our Specialists",
+                          style: TextStyle(
+                              fontSize: 18, fontWeight: FontWeight.bold),
+                        ),
+                      ],
+                    ),
+                  ),
+
+                  const SizedBox(height: 10),
+
+                  SizedBox(
+                    height: 140,
+                    child: ListView(
+                      scrollDirection: Axis.horizontal,
+                      padding: const EdgeInsets.symmetric(horizontal: 12),
+                      children: [
+                        _buildSpecialistCard("assets/images/image1.jpg",
+                            "John Doe", "Sr. Barber"),
+                        _buildSpecialistCard("assets/images/image3.jpg",
+                            "Mike Trim", "Sr. Barber"),
+                        _buildSpecialistCard("assets/images/image2.jpg",
+                            "Alex Fade", "Jr. Barber"),
+                        _buildSpecialistCard("assets/images/image1.jpg",
+                            "Alex Fade", "Jr. Barber"),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 120),
+                ],
+              ),
+            ),
+          ),
+
+          // Book Now Button / Not Registered
+          Positioned(
+            bottom: 0,
+            left: 0,
+            right: 0,
+            child: Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: Colors.grey[50],
+                borderRadius: const BorderRadius.only(
+                  topLeft: Radius.circular(20),
+                  topRight: Radius.circular(20),
+                ),
+              ),
+              child: SizedBox(
+                width: double.infinity,
+                height: 50,
+                child: _isRegistered == null
+                    ? const Center(child: CircularProgressIndicator())
+                    : _isRegistered == true
+                    ? ElevatedButton(
+                  onPressed: () {
+                    if (mergedBarber != null) {
+                      Navigator.pushReplacement(
+                        context,
+                        MaterialPageRoute(
+                            builder: (_) =>
+                                BookNowPage(barber: mergedBarber!)),
+                      );
+                    }
+                  },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.orange,
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(16)),
+                  ),
+                  child: const Text(
+                    "Book Now",
+                    style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white),
+                  ),
+                )
+                    : Container(
+                  decoration: BoxDecoration(
+                    color: Colors.orange,
+                    borderRadius: BorderRadius.circular(16)
+                  ),
+                    child: Center(
+                      child: Text(
+                        "Not Registered",
+                        style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.white),
+                      ),
+                    )
+                  )
+                ),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+}
 
 
 class GooglePlacesService {

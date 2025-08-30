@@ -1,10 +1,13 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:project_sem7/models/shop_profile_model.dart';
+import 'package:project_sem7/uiscreen/main_home_page.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
 import 'package:project_sem7/models/mearge_barber_model.dart';
 import '../providers/booking_provider.dart';
+import '../shop_profile/shop_profile.dart';
 import '../widgets/bottom_action_button.dart';
 
 class ReviewSummary extends StatefulWidget {
@@ -108,7 +111,7 @@ class _ReviewSummaryState extends State<ReviewSummary> {
         ),
       );
 
-      Navigator.of(context).popUntil((route) => route.isFirst);
+      Navigator.pop(context);
     } catch (e) {
       print("❌ Error confirming booking: $e");
       ScaffoldMessenger.of(context).showSnackBar(

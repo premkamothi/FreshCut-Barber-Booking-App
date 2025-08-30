@@ -90,89 +90,6 @@ class _SignupownerState extends State<Signupowner> with RouteAware {
     }
   }
 
-  // NEW METHOD: Save Google signup data to Firestore
-  Future<void> _saveGoogleSignupToFirestore(String uid, GoogleSignInAccount googleUser) async {
-    try {
-      final data = {
-        'uid': uid,
-        'name': googleUser.displayName ?? '',
-        'email': googleUser.email,
-        'mobile': '', // Google doesn't provide mobile by default
-        'signupMethod': 'google',
-        'googleId': googleUser.id,
-        'photoUrl': googleUser.photoUrl ?? '',
-        'timestamp': FieldValue.serverTimestamp(),
-        'isProfileCompleted': false, // They need to complete profile next
-        'ownerRole' : true,
-      };
-
-      // Save to OwnerSignupDetails collection
-      await FirebaseFirestore.instance
-          .collection('OwnerSignupDetails')
-          .doc(uid)
-          .set(data);
-
-      print('Google signup data saved to OwnerSignupDetails');
-    } catch (e) {
-      print('Error saving Google signup data: $e');
-      // Still continue to profile page even if this fails
-    }
-  }
-
-  Future<void> _signInWithGoogle() async {
-    try {
-      final GoogleSignIn googleSignIn = GoogleSignIn();
-      await googleSignIn.signOut(); // Ensures fresh login
-      final GoogleSignInAccount? googleUser = await googleSignIn.signIn();
-      if (googleUser == null) return;
-
-      final GoogleSignInAuthentication googleAuth = await googleUser.authentication;
-      final credential = GoogleAuthProvider.credential(
-        accessToken: googleAuth.accessToken,
-        idToken: googleAuth.idToken,
-      );
-
-      // Sign in to Firebase
-      UserCredential userCredential = await FirebaseAuth.instance.signInWithCredential(credential);
-      final String uid = userCredential.user?.uid ?? '';
-
-      // Check if user profile exists in Firestore
-      final DocumentSnapshot doc = await FirebaseFirestore.instance
-          .collection('ProfileDetail')
-          .doc(uid)
-          .get();
-
-      // MODIFIED: Always save Google signup data to OwnerSignupDetails
-      await _saveGoogleSignupToFirestore(uid, googleUser);
-
-      final prefs = await SharedPreferences.getInstance();
-
-      if (doc.exists) {
-        // Profile already created, set logged in and go to main app
-        await prefs.setBool('is_logged_in', true);
-        await prefs.setString('user_type', 'owner');
-        if (mounted) {
-          Navigator.pushReplacement(
-            context,
-            MaterialPageRoute(builder: (context) => const BottomNavBar(initialIndex: 0)),
-          );
-        }
-      } else {
-        // First-time login, go to Profile screen to complete profile
-        if (mounted) {
-          Navigator.pushReplacement(
-            context,
-            MaterialPageRoute(builder: (context) => const Profile()),
-          );
-        }
-      }
-    } catch (e) {
-      print('Google sign in error: $e');
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("Google sign in failed: $e")),
-      );
-    }
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -192,6 +109,7 @@ class _SignupownerState extends State<Signupowner> with RouteAware {
         body: SingleChildScrollView(
           child: Column(
             children: [
+              SizedBox(height: 80.h,),
               Padding(
                 padding: const EdgeInsets.only(left: 23),
                 child: Text(
@@ -295,38 +213,6 @@ class _SignupownerState extends State<Signupowner> with RouteAware {
                         color: Colors.white,
                         fontSize: 16.sp,
                         fontWeight: FontWeight.bold),
-                  ),
-                ),
-              ),
-
-              SizedBox(height: 100.h),
-
-              SizedBox(
-                height: 40.h,
-                width: 220.w,
-                child: ElevatedButton(
-                  onPressed: _signInWithGoogle,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.white,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                    side: const BorderSide(width: 1),
-                  ),
-                  child: Row(
-                    children: [
-                      SizedBox(width: 5.w),
-                      Image.asset(
-                        "assets/images/google_logo.png",
-                        height: 25.h,
-                        width: 25.w,
-                      ),
-                      SizedBox(width: 4.w),
-                      Text(
-                        "Continue with Google",
-                        style: TextStyle(color: Colors.black, fontSize: 14.sp),
-                      ),
-                    ],
                   ),
                 ),
               ),
