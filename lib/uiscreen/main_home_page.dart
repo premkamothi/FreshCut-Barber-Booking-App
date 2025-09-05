@@ -5,13 +5,12 @@ import 'package:flutter/material.dart' hide Notification;
 import 'package:http/http.dart' as http;
 import 'package:project_sem7/uiscreen/ProfileUpdate.dart';
 import '../models/barber_model.dart';
-import '../shop_profile/shop_profile.dart';
 import '../widgets/custom_search_bar.dart';
 import 'barber_card_list.dart';
 import 'package:geolocator/geolocator.dart';
 import 'city_barber_list_screen.dart';
 import 'notification.dart';
-import 'Login.dart'; // ✅ Make sure your Login screen is imported
+import 'Login.dart'; //
 
 class MainHomePage extends StatefulWidget {
   const MainHomePage({super.key});
@@ -135,7 +134,7 @@ Future<String> getCityFromCoordinates(double lat, double lng) async {
 
 class _MainHomePageState extends State<MainHomePage> {
   late Future<List<BarberModel>> _barberFuture;
-  final List<String> _services = ["All"];
+  final List<String> _services = ["All","Hair Cut", "Facial", "Hair Color", "Hair Spa"];
   String _selectedService = "All";
 
   @override
@@ -249,12 +248,11 @@ class _MainHomePageState extends State<MainHomePage> {
             Row(
               children: [
                 SizedBox(
-                  height: 30,
-                  width: 30,
+                  height: 36,
+                  width: 36,
                   child: Image.asset(
-                      "assets/images/WhatsApp_Image_2025-07-11_at_20.05.12_409f80dc-removebg-preview.png"),
+                      "assets/images/new_logo_1 - Copy.png"),
                 ),
-                const SizedBox(width: 10),
                 const Text(
                   "FreshCut",
                   style: TextStyle(fontWeight: FontWeight.bold, fontSize: 20),

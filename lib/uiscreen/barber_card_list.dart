@@ -5,39 +5,58 @@ import '../models/barber_model.dart';
 import '../providers/liked_shops_provider.dart';
 import '../shop_profile/shop_profile.dart';
 
-class BarberCardList extends StatelessWidget {
+class BarberCardList extends StatefulWidget {
   final List<BarberModel> barbers;
 
   const BarberCardList({super.key, required this.barbers});
 
-  Future<bool> _isShopRegistered(String placeId) async {
-    final doc = await FirebaseFirestore.instance
-        .collection('RegisteredShops')
-        .doc(placeId)
-        .get();
-    return doc.exists;
+  @override
+  State<BarberCardList> createState() => _BarberCardListState();
+}
+
+class _BarberCardListState extends State<BarberCardList> {
+  Set<String> registeredShops = {};
+  bool _loading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadRegisteredShops();
+  }
+
+  Future<void> _loadRegisteredShops() async {
+    final snapshot =
+    await FirebaseFirestore.instance.collection('RegisteredShops').get();
+    setState(() {
+      registeredShops = snapshot.docs.map((doc) => doc.id).toSet();
+      _loading = false;
+    });
   }
 
   @override
   Widget build(BuildContext context) {
     final likedProvider = context.watch<LikedShopsProvider>();
 
+    if (_loading) {
+      return const Center(child: CircularProgressIndicator());
+    }
+
     return SizedBox(
-      height: 315,
+      height: 300,
       child: ListView.separated(
         scrollDirection: Axis.horizontal,
         padding: const EdgeInsets.symmetric(horizontal: 6),
-        itemCount: barbers.length,
+        itemCount: widget.barbers.length,
         separatorBuilder: (context, index) => const SizedBox(width: 12),
         itemBuilder: (context, index) {
-          final barber = barbers[index];
+          final barber = widget.barbers[index];
           final isLiked = likedProvider.isLiked(barber);
+          final isRegistered = registeredShops.contains(barber.placeId);
 
           return SizedBox(
             width: 180,
             child: GestureDetector(
               onTap: () {
-                // Navigate to shop profile with barber data
                 Navigator.push(
                   context,
                   MaterialPageRoute(
@@ -76,8 +95,6 @@ class BarberCardList extends StatelessWidget {
                             ),
                           ),
                         ),
-
-                        // Like Button
                         Positioned(
                           top: 6,
                           right: 6,
@@ -126,14 +143,17 @@ class BarberCardList extends StatelessWidget {
                                   size: 16, color: Colors.orange),
                               const SizedBox(width: 4),
                               Text(
-                                  '${barber.distanceKm.toStringAsFixed(2)} km',
-                                  style: const TextStyle(fontSize: 12)),
+                                '${barber.distanceKm.toStringAsFixed(2)} km',
+                                style: const TextStyle(fontSize: 12),
+                              ),
                               const SizedBox(width: 8),
                               const Icon(Icons.star,
                                   size: 16, color: Colors.orange),
                               const SizedBox(width: 4),
-                              Text(barber.rating.toString(),
-                                  style: const TextStyle(fontSize: 12)),
+                              Text(
+                                barber.rating.toString(),
+                                style: const TextStyle(fontSize: 12),
+                              ),
                             ],
                           ),
                         ],
@@ -143,59 +163,45 @@ class BarberCardList extends StatelessWidget {
                     const Divider(
                         thickness: 1, indent: 16, endIndent: 16, height: 1),
 
-                    // Book Now / Not Registered (Centered)
+                    // Book Now / Not Registered
                     Padding(
                       padding: const EdgeInsets.symmetric(
-                          horizontal: 16, vertical: 16),
-                      child: FutureBuilder<bool>(
-                        future: _isShopRegistered(barber.placeId),
-                        builder: (context, snapshot) {
-                          if (snapshot.connectionState ==
-                              ConnectionState.waiting) {
-                            return const SizedBox.shrink();
-                          }
-
-                          if (snapshot.hasData && snapshot.data == true) {
-                            return Center(
-                              child: TextButton(
-                                onPressed: () {
-                                  Navigator.push(
-                                    context,
-                                    MaterialPageRoute(
-                                      builder: (context) =>
-                                          ShopProfile(barberData: barber),
-                                    ),
-                                  );
-                                },
-                                style: TextButton.styleFrom(
-                                  padding: EdgeInsets.zero,
-                                  minimumSize: Size.zero,
-                                  tapTargetSize:
-                                  MaterialTapTargetSize.shrinkWrap,
-                                ),
-                                child: const Text(
-                                  'Book Now',
-                                  style: TextStyle(
-                                    fontSize: 14,
-                                    fontWeight: FontWeight.w500,
-                                    color: Colors.black,
-                                  ),
-                                ),
+                          horizontal: 16, vertical: 8),
+                      child: Center(
+                        child: isRegistered
+                            ? TextButton(
+                          onPressed: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) =>
+                                    ShopProfile(barberData: barber),
                               ),
                             );
-                          } else {
-                            return const Center(
-                              child: Text(
-                                "Not Registered",
-                                style: TextStyle(
-                                  fontSize: 14,
-                                  fontWeight: FontWeight.w500,
-                                  color: Colors.black,
-                                ),
-                              ),
-                            );
-                          }
-                        },
+                          },
+                          style: TextButton.styleFrom(
+                            padding: EdgeInsets.zero,
+                            minimumSize: Size.zero,
+                            tapTargetSize:
+                            MaterialTapTargetSize.shrinkWrap,
+                          ),
+                          child: const Text(
+                            'Book Now',
+                            style: TextStyle(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w500,
+                              color: Colors.black,
+                            ),
+                          ),
+                        )
+                            : const Text(
+                          "Not Registered",
+                          style: TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w500,
+                            color: Colors.black,
+                          ),
+                        ),
                       ),
                     ),
                   ],

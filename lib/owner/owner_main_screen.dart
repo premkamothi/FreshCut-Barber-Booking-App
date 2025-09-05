@@ -252,10 +252,10 @@ class _OwnerMainScreenState extends State<OwnerMainScreen> {
             Row(
               children: [
                 SizedBox(
-                  height: 30,
-                  width: 30,
+                  height: 44,
+                  width: 44,
                   child: Image.asset(
-                      "assets/images/WhatsApp_Image_2025-07-11_at_20.05.12_409f80dc-removebg-preview.png"),
+                      "assets/images/new_logo_1.png"),
                 ),
                 const SizedBox(width: 10),
                 const Text(
