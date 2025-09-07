@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:project_sem7/owner/owner_main_screen.dart';
 import 'package:project_sem7/owner/shop_preview.dart';
-import 'settings.dart';
+import '../uiscreen/settings.dart';
 
 class NavBar extends StatefulWidget {
   final int initialIndex;
@@ -21,7 +21,7 @@ class _NavBarState extends State<NavBar> {
   void initState() {
     super.initState();
     _selectedIndex = widget.initialIndex;
-    _uid = FirebaseAuth.instance.currentUser?.uid; // ✅ Get logged-in UID
+    _uid = FirebaseAuth.instance.currentUser?.uid;
   }
 
   void _onNavTap(int index) {
@@ -41,24 +41,24 @@ class _NavBarState extends State<NavBar> {
     ];
 
     return Scaffold(
+      backgroundColor: Colors.white,
+      body: IndexedStack(
+        index: _selectedIndex,
+        children: pages,
+      ),
+      bottomNavigationBar: BottomNavigationBar(
+        type: BottomNavigationBarType.fixed,
         backgroundColor: Colors.white,
-        body: IndexedStack(
-          index: _selectedIndex,
-          children: pages,
-        ),
-        bottomNavigationBar: BottomNavigationBar(
-            type: BottomNavigationBarType.fixed,
-            backgroundColor: Colors.white,
-            currentIndex: _selectedIndex,
-            selectedItemColor: Colors.orange,
-            unselectedItemColor: Colors.grey[700],
-            onTap: _onNavTap,
-            items: const [
-              BottomNavigationBarItem(icon: Icon(Icons.home), label: "Home"),
-              BottomNavigationBarItem(icon: Icon(Icons.preview), label: "Preview"),
-              BottomNavigationBarItem(icon: Icon(Icons.settings), label: "Setting"),
-            ],
-            ),
-        );
-    }
+        currentIndex: _selectedIndex,
+        selectedItemColor: Colors.orange,
+        unselectedItemColor: Colors.grey[700],
+        onTap: _onNavTap,
+        items: const [
+          BottomNavigationBarItem(icon: Icon(Icons.home), label: "Home"),
+          BottomNavigationBarItem(icon: Icon(Icons.preview), label: "Preview"),
+          BottomNavigationBarItem(icon: Icon(Icons.settings), label: "Setting"),
+        ],
+      ),
+    );
+  }
 }

@@ -62,63 +62,59 @@ class _PrivacyPolicyPageState extends State<PrivacyPolicyPage> {
 
     List<Map<String, dynamic>> sections = isOwner == true
         ? [
-      {
-        "heading": "Information Collection",
-        "points": [
-          "Shop profile details, working hours, and service pricing.",
-          "Booking data and customer reviews."
-        ]
-      },
-      {
-        "heading": "Usage of Data",
-        "points": [
-          "Display shop details to customers for booking.",
-          "Improve service recommendations."
-        ]
-      },
-      {
-        "heading": "Data Sharing",
-        "points": [
-          "Shared only with customers using the platform.",
-          "Never sold to third parties."
-        ]
-      },
-      {
-        "heading": "Security",
-        "points": [
-          "Encrypted storage for sensitive information."
-        ]
-      },
-    ]
+            {
+              "heading": "Information Collection",
+              "points": [
+                "Shop profile details, working hours, and service pricing.",
+                "Booking data and customer reviews."
+              ]
+            },
+            {
+              "heading": "Usage of Data",
+              "points": [
+                "Display shop details to customers for booking.",
+                "Improve service recommendations."
+              ]
+            },
+            {
+              "heading": "Data Sharing",
+              "points": [
+                "Shared only with customers using the platform.",
+                "Never sold to third parties."
+              ]
+            },
+            {
+              "heading": "Security",
+              "points": ["Encrypted storage for sensitive information."]
+            },
+          ]
         : [
-      {
-        "heading": "Information Collection",
-        "points": [
-          "Name, contact information, and booking preferences.",
-          "Location data for nearby barber search."
-        ]
-      },
-      {
-        "heading": "Usage of Data",
-        "points": [
-          "Show available barbers and manage bookings.",
-          "Improve recommendations and app performance."
-        ]
-      },
-      {
-        "heading": "Data Sharing",
-        "points": [
-          "Your details are shared only with barbers you book.",
-          "Never sold to third parties."
-        ]
-      },
-      {
-        "heading": "Security",
-        "points": [
-          "Encrypted storage and secure communication."
-        ]
-      },
-    ];
+            {
+              "heading": "Information Collection",
+              "points": [
+                "Name, contact information, and booking preferences.",
+                "Location data for nearby barber search."
+              ]
+            },
+            {
+              "heading": "Usage of Data",
+              "points": [
+                "Show available barbers and manage bookings.",
+                "Improve recommendations and app performance."
+              ]
+            },
+            {
+              "heading": "Data Sharing",
+              "points": [
+                "Your details are shared only with barbers you book.",
+                "Never sold to third parties."
+              ]
+            },
+            {
+              "heading": "Security",
+              "points": ["Encrypted storage and secure communication."]
+            },
+          ];
 
     return Card(
       color: Colors.white,
@@ -142,7 +138,8 @@ class _PrivacyPolicyPageState extends State<PrivacyPolicyPage> {
             const SizedBox(height: 12),
             const Text(
               "We value your trust and are committed to protecting your personal information. Please read this policy to understand how we handle your data.",
-              style: TextStyle(fontSize: 15, height: 1.6, color: Colors.black87),
+              style:
+                  TextStyle(fontSize: 15, height: 1.6, color: Colors.black87),
             ),
             const SizedBox(height: 20),
 
@@ -220,79 +217,81 @@ class _PrivacyPolicyPageState extends State<PrivacyPolicyPage> {
         body: isLoading
             ? const Center(child: CircularProgressIndicator())
             : Column(
-          children: [
-            Expanded(
-              child: ListView(
-                padding: const EdgeInsets.all(16),
                 children: [
-                  // Top icon
-                  Center(
-                    child: Icon(
-                      Icons.privacy_tip_rounded,
-                      size: 70,
-                      color: Colors.orange.shade400,
+                  Expanded(
+                    child: ListView(
+                      padding: const EdgeInsets.all(16),
+                      children: [
+                        // Top icon
+                        Center(
+                          child: Icon(
+                            Icons.privacy_tip_rounded,
+                            size: 70,
+                            color: Colors.orange.shade400,
+                          ),
+                        ),
+                        const SizedBox(height: 16),
+
+                        _buildPolicyText(),
+                      ],
                     ),
                   ),
-                  const SizedBox(height: 16),
+                  // Bottom Accept Button
+                  Container(
+                    color: Colors.white,
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 16, vertical: 12),
+                    child: SizedBox(
+                      width: double.infinity,
+                      child: ElevatedButton(
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.red,
+                          padding: const EdgeInsets.symmetric(vertical: 16),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          elevation: 3,
+                        ),
+                        onPressed: () async {
+                          final uid = FirebaseAuth.instance.currentUser?.uid;
+                          if (uid == null) return;
 
-                  _buildPolicyText(),
+                          try {
+                            await FirebaseFirestore.instance
+                                .collection(
+                                    'RegisteredShops') // <-- your target collection
+                                .doc(uid)
+                                .set({
+                              'privacyPolicyAccepted': true,
+                              'privacyAcceptedAt':
+                                  FieldValue.serverTimestamp(), // optional
+                            }, SetOptions(merge: true));
+
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                  content: Text('Privacy policy accepted')),
+                            );
+
+                            Navigator.pop(context);
+                          } catch (e) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(content: Text('Error: $e')),
+                            );
+                          }
+                        },
+                        child: const Text(
+                          "Accept",
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.white,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
                 ],
               ),
-            ),
-            // Bottom Accept Button
-            Container(
-              color: Colors.white,
-              padding: const EdgeInsets.symmetric(
-                  horizontal: 16, vertical: 12),
-              child: SizedBox(
-                width: double.infinity,
-                child: ElevatedButton(
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.red,
-                    padding: const EdgeInsets.symmetric(vertical: 16),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    elevation: 3,
-                  ),
-                  onPressed: () async {
-                    final uid = FirebaseAuth.instance.currentUser?.uid;
-                    if (uid == null) return;
-
-                    try {
-                      await FirebaseFirestore.instance
-                          .collection('RegisteredShops') // <-- your target collection
-                          .doc(uid)
-                          .set({
-                        'privacyPolicyAccepted': true,
-                        'privacyAcceptedAt': FieldValue.serverTimestamp(), // optional
-                      }, SetOptions(merge: true));
-
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('Privacy policy accepted')),
-                      );
-
-                      Navigator.pop(context);
-                    } catch (e) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(content: Text('Error: $e')),
-                      );
-                    }
-                  },
-
-                  child: const Text(
-                    "Accept",
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.white,
-                    ),
-                  ),
-                ),
-              ),
-            ),
-          ],
-        ),
       ),
     );
   }

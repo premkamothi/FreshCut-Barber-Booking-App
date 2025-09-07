@@ -1,5 +1,3 @@
-import 'package:flutter/material.dart';
-
 class BarberModel {
   final String placeId;
   final String name;
@@ -42,10 +40,10 @@ class BarberModel {
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
-          other is BarberModel &&
-              runtimeType == other.runtimeType &&
-              name == other.name &&
-              address == other.address;
+      other is BarberModel &&
+          runtimeType == other.runtimeType &&
+          name == other.name &&
+          address == other.address;
 
   @override
   int get hashCode => name.hashCode ^ address.hashCode;

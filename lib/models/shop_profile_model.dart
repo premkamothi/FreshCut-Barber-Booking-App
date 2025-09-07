@@ -49,7 +49,6 @@ class ShopProfileDetails {
         monFriEnd: data['monFriEnd'],
         satSunStart: data['satSunStart'],
         satSunEnd: data['satSunEnd'],
-
         shopPhotos: data['shopPhotos'] != null
             ? List<String>.from(data['shopPhotos'])
             : null,
@@ -61,9 +60,9 @@ class ShopProfileDetails {
 
         // Contacts
         primaryContactNumber: data['primaryContactNumber']?.toString(),
-        additionalContactNumbers: (data['additionalContactNumbers'] as List<dynamic>?)
-            ?.map((e) => e.toString()) // ✅ ensures it's always List<String>
-            .toList()
-    );
+        additionalContactNumbers:
+            (data['additionalContactNumbers'] as List<dynamic>?)
+                ?.map((e) => e.toString())
+                .toList());
   }
 }

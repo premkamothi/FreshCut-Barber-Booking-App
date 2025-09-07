@@ -31,7 +31,7 @@ class _ShopRegisterState extends State<ShopRegister> {
     _loadShopDetails();
   }
 
-  /// 🔹 Load the user's registered shop, if any
+  /// Load the user's registered shop, if any
   Future<void> _loadShopDetails() async {
     final user = FirebaseAuth.instance.currentUser;
     if (user == null) {
@@ -64,7 +64,7 @@ class _ShopRegisterState extends State<ShopRegister> {
     setState(() => _isLoading = false);
   }
 
-  /// 🔹 Google Places search
+  /// Google Places search
   Future<void> _searchShops(String query) async {
     if (query.isEmpty) {
       setState(() => _searchResults.clear());
@@ -99,14 +99,15 @@ class _ShopRegisterState extends State<ShopRegister> {
     setState(() => _isSearching = false);
   }
 
-  /// 🔹 Register the shop using Google Place ID & UID both
+  /// Register the shop using Google Place ID & UID both
   Future<void> _registerShop() async {
     final user = FirebaseAuth.instance.currentUser;
     if (user == null) return;
 
     if (_selectedPlaceId == null || _selectedPlaceId!.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Please select a shop from search results.")),
+        const SnackBar(
+            content: Text("Please select a shop from search results.")),
       );
       return;
     }
@@ -134,7 +135,8 @@ class _ShopRegisterState extends State<ShopRegister> {
 
     if (!profileSnap.exists) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Profile not found. Please update profile first.")),
+        const SnackBar(
+            content: Text("Profile not found. Please update profile first.")),
       );
       return;
     }
@@ -185,7 +187,6 @@ class _ShopRegisterState extends State<ShopRegister> {
     Navigator.pop(context);
   }
 
-
   @override
   Widget build(BuildContext context) {
     if (_isLoading) {
@@ -218,7 +219,8 @@ class _ShopRegisterState extends State<ShopRegister> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 const Text("Find Your Shop",
-                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
+                    style:
+                        TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
                 TextField(
                   controller: _searchController,
                   enabled: !_isAlreadyRegistered,
@@ -236,7 +238,8 @@ class _ShopRegisterState extends State<ShopRegister> {
                 ),
                 const SizedBox(height: 20),
                 const Text("Shop Details",
-                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
+                    style:
+                        TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
                 _buildCard(
                   child: TextField(
                     controller: _shopNameController,
@@ -249,7 +252,8 @@ class _ShopRegisterState extends State<ShopRegister> {
                 ),
                 const SizedBox(height: 16),
                 const Text("Contact Numbers",
-                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
+                    style:
+                        TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
                 Column(
                   children: List.generate(_phoneControllers.length, (index) {
                     return Padding(
@@ -270,7 +274,8 @@ class _ShopRegisterState extends State<ShopRegister> {
                 ),
                 const SizedBox(height: 16),
                 const Text("Address",
-                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
+                    style:
+                        TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
                 _buildCard(
                   child: TextField(
                     controller: _addressController,
@@ -330,9 +335,11 @@ class _ShopRegisterState extends State<ShopRegister> {
           child: ElevatedButton(
             onPressed: _isAlreadyRegistered ? null : _registerShop,
             style: ElevatedButton.styleFrom(
-              backgroundColor: _isAlreadyRegistered ? Colors.grey : Colors.orange,
+              backgroundColor:
+                  _isAlreadyRegistered ? Colors.grey : Colors.orange,
               padding: const EdgeInsets.symmetric(vertical: 16),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12)),
             ),
             child: Text(
               _isAlreadyRegistered ? "Already Registered" : "Register Shop",

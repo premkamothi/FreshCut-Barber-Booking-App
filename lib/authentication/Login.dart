@@ -1,15 +1,10 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
-import 'package:google_sign_in/google_sign_in.dart';
-import 'package:project_sem7/uiscreen/ForgetPassword.dart';
-import 'package:project_sem7/uiscreen/Profile.dart';
+import 'package:project_sem7/authentication/ForgetPassword.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-
 import 'Signup.dart';
-import 'bottom_nav_bar.dart';
-import 'main_home_page.dart';
+import '../widgets/bottom_nav_bar.dart';
 
 class Login extends StatefulWidget {
   const Login({super.key});
@@ -24,7 +19,6 @@ class _LoginState extends State<Login> {
   final TextEditingController _passwordController = TextEditingController();
   bool _isPasswordVisible = false;
   String? _authErrorMessage;
-
 
   @override
   Widget build(BuildContext context) {
@@ -47,7 +41,10 @@ class _LoginState extends State<Login> {
                 padding: EdgeInsets.only(left: 23.w),
                 child: Text(
                   "Login to your Account",
-                  style: TextStyle(fontSize: 45.sp, fontWeight: FontWeight.bold, color: Colors.black),
+                  style: TextStyle(
+                      fontSize: 45.sp,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.black),
                 ),
               ),
               SizedBox(height: 40.h),
@@ -65,13 +62,15 @@ class _LoginState extends State<Login> {
                           hintStyle: const TextStyle(color: Colors.grey),
                           filled: true,
                           fillColor: Colors.grey.shade50,
-                          prefixIcon: const Icon(Icons.email, color: Colors.black),
+                          prefixIcon:
+                              const Icon(Icons.email, color: Colors.black),
                           enabledBorder: OutlineInputBorder(
                             borderSide: const BorderSide(color: Colors.grey),
                             borderRadius: BorderRadius.circular(10.r),
                           ),
                           focusedBorder: OutlineInputBorder(
-                            borderSide: BorderSide(color: Colors.black, width: 2.w),
+                            borderSide:
+                                BorderSide(color: Colors.black, width: 2.w),
                             borderRadius: BorderRadius.circular(10.r),
                           ),
                         ),
@@ -97,13 +96,17 @@ class _LoginState extends State<Login> {
                           hintStyle: const TextStyle(color: Colors.grey),
                           filled: true,
                           fillColor: Colors.grey.shade50,
-                          prefixIcon: const Icon(Icons.password, color: Colors.black),
+                          prefixIcon:
+                              const Icon(Icons.password, color: Colors.black),
                           suffixIcon: IconButton(
                             onPressed: () {
-                              setState(() => _isPasswordVisible = !_isPasswordVisible);
+                              setState(() =>
+                                  _isPasswordVisible = !_isPasswordVisible);
                             },
                             icon: Icon(
-                              _isPasswordVisible ? Icons.visibility : Icons.visibility_off,
+                              _isPasswordVisible
+                                  ? Icons.visibility
+                                  : Icons.visibility_off,
                               color: Colors.black,
                             ),
                           ),
@@ -112,7 +115,8 @@ class _LoginState extends State<Login> {
                             borderRadius: BorderRadius.circular(10.r),
                           ),
                           focusedBorder: OutlineInputBorder(
-                            borderSide: BorderSide(color: Colors.black, width: 2.w),
+                            borderSide:
+                                BorderSide(color: Colors.black, width: 2.w),
                             borderRadius: BorderRadius.circular(10.r),
                           ),
                         ),
@@ -130,12 +134,14 @@ class _LoginState extends State<Login> {
                         onPressed: () {
                           Navigator.push(
                             context,
-                            MaterialPageRoute(builder: (context) => Forgetpassword()),
+                            MaterialPageRoute(
+                                builder: (context) => Forgetpassword()),
                           );
                         },
                         child: Text(
                           "Forget Password?",
-                          style: TextStyle(color: Colors.orange, fontSize: 15.sp),
+                          style:
+                              TextStyle(color: Colors.orange, fontSize: 15.sp),
                         ),
                       ),
                     ),
@@ -155,20 +161,23 @@ class _LoginState extends State<Login> {
                         onPressed: () async {
                           if (_formkey.currentState!.validate()) {
                             try {
-                              await FirebaseAuth.instance.signInWithEmailAndPassword(
+                              await FirebaseAuth.instance
+                                  .signInWithEmailAndPassword(
                                 email: _emailController.text.trim(),
                                 password: _passwordController.text.trim(),
                               );
 
-                              // ✅ Set shared preference flag
-                              final prefs = await SharedPreferences.getInstance();
+                              final prefs =
+                                  await SharedPreferences.getInstance();
                               await prefs.setBool('is_logged_in', true);
                               await prefs.setString('user_type', 'customer');
 
                               if (mounted) {
                                 Navigator.pushReplacement(
                                   context,
-                                  MaterialPageRoute(builder: (context) => const BottomNavBar(initialIndex: 0)),
+                                  MaterialPageRoute(
+                                      builder: (context) =>
+                                          const BottomNavBar(initialIndex: 0)),
                                 );
                               }
                             } on FirebaseAuthException catch (e) {
@@ -180,7 +189,8 @@ class _LoginState extends State<Login> {
                               }
                               setState(() => _authErrorMessage = message);
                             } catch (e) {
-                              setState(() => _authErrorMessage = 'An error occurred. Please try again.');
+                              setState(() => _authErrorMessage =
+                                  'An error occurred. Please try again.');
                             }
                           }
                         },
@@ -192,21 +202,30 @@ class _LoginState extends State<Login> {
                         ),
                         child: Text(
                           "Login",
-                          style: TextStyle(color: Colors.white, fontSize: 16.sp, fontWeight: FontWeight.bold),
+                          style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 16.sp,
+                              fontWeight: FontWeight.bold),
                         ),
                       ),
                     ),
                     SizedBox(height: 20.h),
                     GestureDetector(
                       onTap: () {
-                        Navigator.push(context, MaterialPageRoute(builder: (context) => Signup()));
+                        Navigator.push(context,
+                            MaterialPageRoute(builder: (context) => Signup()));
                       },
-                      child: RichText(text: TextSpan(
-                          children: [
-                            TextSpan(text: "Don't have an account?", style: TextStyle(fontSize: 14.sp,color: Colors.black)),
-                            TextSpan(text: " Sign Up" ,style: TextStyle(color: Colors.orange,fontSize: 14.sp)),
-                          ]
-                      )),
+                      child: RichText(
+                          text: TextSpan(children: [
+                        TextSpan(
+                            text: "Don't have an account?",
+                            style: TextStyle(
+                                fontSize: 14.sp, color: Colors.black)),
+                        TextSpan(
+                            text: " Sign Up",
+                            style: TextStyle(
+                                color: Colors.orange, fontSize: 14.sp)),
+                      ])),
                     ),
                   ],
                 ),

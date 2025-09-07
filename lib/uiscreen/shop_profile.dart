@@ -5,7 +5,6 @@ import 'package:flutter/rendering.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:http/http.dart' as http;
 import 'package:url_launcher/url_launcher.dart';
-import '../Services.dart';
 import '../booking/book_now_page.dart';
 import '../models/barber_model.dart';
 import '../models/mearge_barber_model.dart';
@@ -69,8 +68,8 @@ class _ShopProfileState extends State<ShopProfile> {
 
       ShopProfileDetails? firebaseProfile;
       if (doc.exists) {
-        firebaseProfile =
-            ShopProfileDetails.fromMap(doc.id, doc.data() as Map<String, dynamic>);
+        firebaseProfile = ShopProfileDetails.fromMap(
+            doc.id, doc.data() as Map<String, dynamic>);
       }
 
       setState(() {
@@ -108,36 +107,34 @@ class _ShopProfileState extends State<ShopProfile> {
     }
   }
 
-  // ---------------- HELPER WIDGETS ---------------- //
-
   Widget _buildImageCard(String imageUrl) {
     return ClipRRect(
       borderRadius: BorderRadius.zero,
       child: imageUrl.startsWith('http')
           ? Image.network(
-        imageUrl,
-        width: MediaQuery.of(context).size.width,
-        height: 256,
-        fit: BoxFit.cover,
-        errorBuilder: (context, error, stackTrace) {
-          return Container(
-            width: MediaQuery.of(context).size.width,
-            height: 256,
-            color: Colors.grey[200],
-            child: const Icon(
-              Icons.image_not_supported,
-              size: 50,
-              color: Colors.grey,
-            ),
-          );
-        },
-      )
+              imageUrl,
+              width: MediaQuery.of(context).size.width,
+              height: 256,
+              fit: BoxFit.cover,
+              errorBuilder: (context, error, stackTrace) {
+                return Container(
+                  width: MediaQuery.of(context).size.width,
+                  height: 256,
+                  color: Colors.grey[200],
+                  child: const Icon(
+                    Icons.image_not_supported,
+                    size: 50,
+                    color: Colors.grey,
+                  ),
+                );
+              },
+            )
           : Image.asset(
-        imageUrl,
-        width: MediaQuery.of(context).size.width,
-        height: 256,
-        fit: BoxFit.cover,
-      ),
+              imageUrl,
+              width: MediaQuery.of(context).size.width,
+              height: 256,
+              fit: BoxFit.cover,
+            ),
     );
   }
 
@@ -217,8 +214,6 @@ class _ShopProfileState extends State<ShopProfile> {
     );
   }
 
-  // ---------------- MAIN BUILD ---------------- //
-
   @override
   Widget build(BuildContext context) {
     final barber = widget.barberData;
@@ -257,10 +252,10 @@ class _ShopProfileState extends State<ShopProfile> {
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: List.generate(
                               (_shopImages.length + 1),
-                                  (index) => AnimatedContainer(
+                              (index) => AnimatedContainer(
                                 duration: const Duration(milliseconds: 300),
                                 margin:
-                                const EdgeInsets.symmetric(horizontal: 4),
+                                    const EdgeInsets.symmetric(horizontal: 4),
                                 height: 8,
                                 width: _currentPage == index ? 20 : 8,
                                 decoration: BoxDecoration(
@@ -350,8 +345,8 @@ class _ShopProfileState extends State<ShopProfile> {
                         const SizedBox(width: 8),
                         Text(
                           "${barber?.rating ?? 5.0}",
-                          style: TextStyle(
-                              fontSize: 14, color: Colors.grey[500]),
+                          style:
+                              TextStyle(fontSize: 14, color: Colors.grey[500]),
                         ),
                         const Spacer(),
                         if (barber != null)
@@ -383,7 +378,8 @@ class _ShopProfileState extends State<ShopProfile> {
                     child: Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        _buildServiceCircle(Icons.language, "Website", () async {
+                        _buildServiceCircle(Icons.language, "Website",
+                            () async {
                           if (mergedBarber?.website != null &&
                               mergedBarber!.website!.isNotEmpty) {
                             final Uri url = Uri.parse(
@@ -396,22 +392,22 @@ class _ShopProfileState extends State<ShopProfile> {
                           }
                         }),
                         _buildServiceCircle(Icons.design_services, "Services",
-                                () {
-                              if (mergedBarber != null) {
-                                _showServicesBottomSheet(context, mergedBarber!);
-                              }
-                            }),
+                            () {
+                          if (mergedBarber != null) {
+                            _showServicesBottomSheet(context, mergedBarber!);
+                          }
+                        }),
                         _buildServiceCircle(Icons.call, "Call", () {
                           if (mergedBarber != null) {
                             _showContactBottomSheet(context, mergedBarber!);
                           }
                         }),
                         _buildServiceCircle(Icons.directions, "Direction",
-                                () async {
-                              if (barber != null) {
-                                await _openGoogleMaps(barber.lat, barber.lng);
-                              }
-                            }),
+                            () async {
+                          if (barber != null) {
+                            await _openGoogleMaps(barber.lat, barber.lng);
+                          }
+                        }),
                         _buildServiceCircle(Icons.info, "About Us", () {
                           if (mergedBarber != null) {
                             showModalBottomSheet(
@@ -425,7 +421,7 @@ class _ShopProfileState extends State<ShopProfile> {
                                   child: Column(
                                     mainAxisSize: MainAxisSize.min,
                                     crossAxisAlignment:
-                                    CrossAxisAlignment.start,
+                                        CrossAxisAlignment.start,
                                     children: [
                                       Center(
                                         child: Container(
@@ -434,7 +430,7 @@ class _ShopProfileState extends State<ShopProfile> {
                                           decoration: BoxDecoration(
                                             color: Colors.grey[300],
                                             borderRadius:
-                                            BorderRadius.circular(2),
+                                                BorderRadius.circular(2),
                                           ),
                                         ),
                                       ),
@@ -520,7 +516,7 @@ class _ShopProfileState extends State<ShopProfile> {
                   // Specialists
                   Padding(
                     padding:
-                    const EdgeInsets.only(top: 16, right: 12, left: 12),
+                        const EdgeInsets.only(top: 16, right: 12, left: 12),
                     child: Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
@@ -573,59 +569,55 @@ class _ShopProfileState extends State<ShopProfile> {
                 ),
               ),
               child: SizedBox(
-                width: double.infinity,
-                height: 50,
-                child: _isRegistered == null
-                    ? const Center(child: CircularProgressIndicator())
-                    : _isRegistered == true
-                    ? ElevatedButton(
-                  onPressed: () {
-                    if (mergedBarber != null) {
-                      Navigator.pushReplacement(
-                        context,
-                        MaterialPageRoute(
-                            builder: (_) =>
-                                BookNowPage(barber: mergedBarber!)),
-                      );
-                    }
-                  },
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.orange,
-                    shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(16)),
-                  ),
-                  child: const Text(
-                    "Book Now",
-                    style: TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.white),
-                  ),
-                )
-                    : Container(
-                  decoration: BoxDecoration(
-                    color: Colors.orange,
-                    borderRadius: BorderRadius.circular(16)
-                  ),
-                    child: Center(
-                      child: Text(
-                        "Not Registered",
-                        style: TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.white),
-                      ),
-                    )
-                  )
-                ),
-              ),
+                  width: double.infinity,
+                  height: 50,
+                  child: _isRegistered == null
+                      ? const Center(child: CircularProgressIndicator())
+                      : _isRegistered == true
+                          ? ElevatedButton(
+                              onPressed: () {
+                                if (mergedBarber != null) {
+                                  Navigator.pushReplacement(
+                                    context,
+                                    MaterialPageRoute(
+                                        builder: (_) =>
+                                            BookNowPage(barber: mergedBarber!)),
+                                  );
+                                }
+                              },
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: Colors.orange,
+                                shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(16)),
+                              ),
+                              child: const Text(
+                                "Book Now",
+                                style: TextStyle(
+                                    fontSize: 18,
+                                    fontWeight: FontWeight.bold,
+                                    color: Colors.white),
+                              ),
+                            )
+                          : Container(
+                              decoration: BoxDecoration(
+                                  color: Colors.orange,
+                                  borderRadius: BorderRadius.circular(16)),
+                              child: Center(
+                                child: Text(
+                                  "Not Registered",
+                                  style: TextStyle(
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.bold,
+                                      color: Colors.white),
+                                ),
+                              ))),
             ),
+          ),
         ],
       ),
     );
   }
 }
-
 
 class GooglePlacesService {
   final String apiKey = "AIzaSyA5xVaMFV6c5rM4BCq1uVzUmXD_MxGwEZY";
@@ -664,7 +656,8 @@ class GooglePlacesService {
 }
 
 void _showServicesBottomSheet(BuildContext context, MergedBarber mergedBarber) {
-  final services = mergedBarber.services; // Assuming services is available in MergedBarber
+  final services =
+      mergedBarber.services; // Assuming services is available in MergedBarber
 
   showModalBottomSheet(
     backgroundColor: Colors.white,
@@ -715,7 +708,8 @@ void _showServicesBottomSheet(BuildContext context, MergedBarber mergedBarber) {
                     ),
                     margin: const EdgeInsets.symmetric(vertical: 6),
                     child: ListTile(
-                      leading: Icon(_getServiceIcon(name), color: Colors.orange),
+                      leading:
+                          Icon(_getServiceIcon(name), color: Colors.orange),
                       title: Text(
                         name,
                         style: const TextStyle(fontWeight: FontWeight.w600),
@@ -809,12 +803,12 @@ void _showContactBottomSheet(BuildContext context, MergedBarber mergedBarber) {
                       },
                     ),
                   ...additional.map((number) => ListTile(
-                    leading: const Icon(Icons.phone, color: Colors.orange),
-                    title: Text(number),
-                    onTap: () {
-                      launchUrl(Uri.parse("tel:$number"));
-                    },
-                  )),
+                        leading: const Icon(Icons.phone, color: Colors.orange),
+                        title: Text(number),
+                        onTap: () {
+                          launchUrl(Uri.parse("tel:$number"));
+                        },
+                      )),
                 ],
               ),
             ),

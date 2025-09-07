@@ -1,13 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:project_sem7/booking/booked_slot.dart';
-import 'package:project_sem7/uiscreen/RegisterPage.dart';
-import '../shop_profile/edit_shop_profile.dart';
-import '../shop_profile/shop_profile.dart';
-import 'liked_shops.dart';
-import 'location_and_barber_shop.dart';
-import 'main_home_page.dart';
-import 'my_booking_page.dart';
-import 'settings.dart';
+import '../uiscreen/liked_shops.dart';
+import '../uiscreen/location_and_barber_shop.dart';
+import '../uiscreen/main_home_page.dart';
+import '../uiscreen/settings.dart';
 
 class BottomNavBar extends StatefulWidget {
   final int initialIndex;

@@ -2,7 +2,6 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:project_sem7/uiscreen/ProfileUpdate.dart';
-import '../uiscreen/notification.dart';
 
 class OwnerMainScreen extends StatefulWidget {
   const OwnerMainScreen({super.key});
@@ -46,7 +45,7 @@ class _OwnerMainScreenState extends State<OwnerMainScreen> {
     if (user == null) return null;
 
     final shopDoc =
-    await firestore.collection("RegisteredShops").doc(user.uid).get();
+        await firestore.collection("RegisteredShops").doc(user.uid).get();
     if (!shopDoc.exists) return null;
 
     return shopDoc.id;
@@ -73,7 +72,7 @@ class _OwnerMainScreenState extends State<OwnerMainScreen> {
 
       List bookings = List.from(data['bookings'] ?? []);
       int ownerBookingIndex =
-      bookings.indexWhere((b) => (b['bookingId'] ?? "") == bookingId);
+          bookings.indexWhere((b) => (b['bookingId'] ?? "") == bookingId);
 
       if (ownerBookingIndex == -1) return;
 
@@ -88,8 +87,7 @@ class _OwnerMainScreenState extends State<OwnerMainScreen> {
       setState(() => processedBookings.add(bookingId));
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-            content:
-            Text(accepted ? "Booking Accepted ✅" : "Booking Declined ❌")),
+            content: Text(accepted ? "Booking Accepted" : "Booking Declined")),
       );
 
       // Continue updating in user's document if accepted
@@ -103,7 +101,7 @@ class _OwnerMainScreenState extends State<OwnerMainScreen> {
       List userBookings = List.from(userData['bookings'] ?? []);
 
       int userBookingIndex =
-      userBookings.indexWhere((b) => (b['bookingId'] ?? "") == bookingId);
+          userBookings.indexWhere((b) => (b['bookingId'] ?? "") == bookingId);
 
       if (userBookingIndex != -1) {
         userBookings[userBookingIndex]['status'] = accepted;
@@ -116,7 +114,6 @@ class _OwnerMainScreenState extends State<OwnerMainScreen> {
       debugPrint("Error updating booking status: $e");
     }
   }
-
 
   Future<void> _updateArrivalStatus(
       String docId, String bookingId, bool accepted) async {
@@ -138,10 +135,10 @@ class _OwnerMainScreenState extends State<OwnerMainScreen> {
         return;
       }
 
-      // ✅ Update booking for owner
+      // Update booking for owner
       List bookings = List.from(data['bookings'] ?? []);
       int ownerBookingIndex =
-      bookings.indexWhere((b) => (b['bookingId'] ?? "") == bookingId);
+          bookings.indexWhere((b) => (b['bookingId'] ?? "") == bookingId);
 
       if (ownerBookingIndex == -1) return;
 
@@ -157,14 +154,11 @@ class _OwnerMainScreenState extends State<OwnerMainScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
-            accepted
-                ? "Customer has been visited ✅"
-                : "Customer not on time ❌",
+            accepted ? "Customer has been visited" : "Customer not on time",
           ),
         ),
       );
 
-      // ✅ Mirror update on customer side
       final userId = booking['userId'] as String;
       final userDocRef = firestore.collection("BookedSlots").doc(userId);
 
@@ -175,7 +169,7 @@ class _OwnerMainScreenState extends State<OwnerMainScreen> {
       List userBookings = List.from(userData['bookings'] ?? []);
 
       int userBookingIndex =
-      userBookings.indexWhere((b) => (b['bookingId'] ?? "") == bookingId);
+          userBookings.indexWhere((b) => (b['bookingId'] ?? "") == bookingId);
 
       if (userBookingIndex != -1) {
         userBookings[userBookingIndex]['arrived'] = accepted;
@@ -185,7 +179,6 @@ class _OwnerMainScreenState extends State<OwnerMainScreen> {
         });
       }
 
-      // ✅ Missed visits logic
       int missedCount = userData['missedCount'] ?? 0;
       const int maxMissed = 2;
 
@@ -193,31 +186,31 @@ class _OwnerMainScreenState extends State<OwnerMainScreen> {
         missedCount++;
 
         if (missedCount >= maxMissed) {
-          // 🚫 Block account on 2nd miss
+          // Block account on 2nd miss
           await userDocRef.update({
             'missedCount': missedCount,
             'blocked': true,
           });
 
           await userDocRef.update({
-            'title': "Account Blocked 🚫",
+            'title': "Account Blocked",
             'body':
-            "Your account has been blocked because you missed $missedCount visits.",
+                "Your account has been blocked because you missed $missedCount visits.",
             'createdAt': FieldValue.serverTimestamp(),
           });
         } else if (missedCount == maxMissed - 1) {
-          // ⚠️ Send final warning on 1st miss
+          // Send final warning on 1st miss
           await userDocRef.update({'missedCount': missedCount});
 
           await userDocRef.update({
             'title': "Final Warning ⚠️",
             'body':
-            "This is your last chance! If you miss another visit, your account will be blocked.",
+                "This is your last chance! If you miss another visit, your account will be blocked.",
             'createdAt': FieldValue.serverTimestamp(),
           });
         }
       } else {
-        // ✅ Reset missed count if the user arrived
+        //Reset missed count if the user arrived
         await userDocRef.update({'missedCount': 0});
       }
     } catch (e) {
@@ -228,7 +221,6 @@ class _OwnerMainScreenState extends State<OwnerMainScreen> {
   int _extractSlotStart(String? slot) {
     if (slot == null || slot.isEmpty) return 0;
     try {
-      // Expect format like "8-9", "09-10"
       final parts = slot.split("-");
       return int.tryParse(parts[0].trim()) ?? 0;
     } catch (_) {
@@ -254,8 +246,7 @@ class _OwnerMainScreenState extends State<OwnerMainScreen> {
                 SizedBox(
                   height: 44,
                   width: 44,
-                  child: Image.asset(
-                      "assets/images/new_logo_1.png"),
+                  child: Image.asset("assets/images/new_logo_1.png"),
                 ),
                 const SizedBox(width: 10),
                 const Text(
@@ -300,13 +291,14 @@ class _OwnerMainScreenState extends State<OwnerMainScreen> {
             return const Center(child: CircularProgressIndicator());
           }
           if (!snapshot.hasData || snapshot.data == null) {
-            return const Center(child: Text("No shop registered for this user"));
+            return const Center(
+                child: Text("No shop registered for this user"));
           }
 
           final ownerUid = snapshot.data!;
           return StreamBuilder<DocumentSnapshot>(
             stream:
-            firestore.collection("BookedSlots").doc(ownerUid).snapshots(),
+                firestore.collection("BookedSlots").doc(ownerUid).snapshots(),
             builder: (context, snapshot) {
               if (snapshot.connectionState == ConnectionState.waiting) {
                 return const Center(child: CircularProgressIndicator());
@@ -317,7 +309,7 @@ class _OwnerMainScreenState extends State<OwnerMainScreen> {
 
               final data = snapshot.data!.data() as Map<String, dynamic>;
               final bookings =
-              (data['bookings'] as List<dynamic>? ?? []).reversed.toList();
+                  (data['bookings'] as List<dynamic>? ?? []).reversed.toList();
 
               if (bookings.isEmpty) {
                 return const Center(child: Text("No bookings available"));
@@ -332,8 +324,8 @@ class _OwnerMainScreenState extends State<OwnerMainScreen> {
                 return booking['date'] == todayStr && booking['status'] == true;
               }).toList();
 
-              todayAccepted.sort((a, b) =>
-                  _extractSlotStart(a['slot']).compareTo(_extractSlotStart(b['slot'])));
+              todayAccepted.sort((a, b) => _extractSlotStart(a['slot'])
+                  .compareTo(_extractSlotStart(b['slot'])));
 
               return Column(
                 children: [
@@ -358,8 +350,8 @@ class _OwnerMainScreenState extends State<OwnerMainScreen> {
                                     style: TextStyle(color: Colors.grey)),
                               ...todayAccepted.map((b) {
                                 final booking = b as Map<String, dynamic>;
-                                final profile =
-                                (booking['profile'] ?? {}) as Map<String, dynamic>;
+                                final profile = (booking['profile'] ?? {})
+                                    as Map<String, dynamic>;
 
                                 return Card(
                                   margin: const EdgeInsets.only(bottom: 12),
@@ -377,7 +369,7 @@ class _OwnerMainScreenState extends State<OwnerMainScreen> {
                                     ),
                                     subtitle: Column(
                                       crossAxisAlignment:
-                                      CrossAxisAlignment.start,
+                                          CrossAxisAlignment.start,
                                       children: [
                                         Text(profile['mobile'] ?? "No Phone"),
                                         Text("Slot: ${booking['slot'] ?? "-"}"),
@@ -390,9 +382,8 @@ class _OwnerMainScreenState extends State<OwnerMainScreen> {
                           );
                         }
 
-                        // 🔹 Other bookings section (unchanged)
-                        final booking =
-                        bookings[index] as Map<String, dynamic>;
+                        // Other bookings section (unchanged)
+                        final booking = bookings[index] as Map<String, dynamic>;
                         final bookingId =
                             "${booking['slot']}-${booking['date']}-${booking['userId']}";
                         final profile =
@@ -425,13 +416,13 @@ class _OwnerMainScreenState extends State<OwnerMainScreen> {
                                       backgroundImage: profile['avatar'] != null
                                           ? NetworkImage(profile['avatar'])
                                           : const AssetImage(
-                                          "assets/images/avatar1.png")
-                                      as ImageProvider,
+                                                  "assets/images/avatar1.png")
+                                              as ImageProvider,
                                     ),
                                     const SizedBox(width: 12),
                                     Column(
                                       crossAxisAlignment:
-                                      CrossAxisAlignment.start,
+                                          CrossAxisAlignment.start,
                                       children: [
                                         Text(profile['name'] ?? "No Name",
                                             style: const TextStyle(
@@ -479,8 +470,7 @@ class _OwnerMainScreenState extends State<OwnerMainScreen> {
                                       ),
                                       child: Text(
                                           "${s['name']} - ₹${s['price']}",
-                                          style:
-                                          const TextStyle(fontSize: 12)),
+                                          style: const TextStyle(fontSize: 12)),
                                     );
                                   }).toList(),
                                 ),
@@ -500,14 +490,13 @@ class _OwnerMainScreenState extends State<OwnerMainScreen> {
                                                 vertical: 14),
                                             shape: RoundedRectangleBorder(
                                               borderRadius:
-                                              BorderRadius.circular(12),
+                                                  BorderRadius.circular(12),
                                             ),
                                           ),
-                                          onPressed: () =>
-                                              _updateBookingStatus(
-                                                  ownerUid,
-                                                  booking['bookingId'],
-                                                  true),
+                                          onPressed: () => _updateBookingStatus(
+                                              ownerUid,
+                                              booking['bookingId'],
+                                              true),
                                           child: const Text("Accept",
                                               style: TextStyle(fontSize: 16)),
                                         ),
@@ -521,14 +510,13 @@ class _OwnerMainScreenState extends State<OwnerMainScreen> {
                                                 vertical: 14),
                                             shape: RoundedRectangleBorder(
                                               borderRadius:
-                                              BorderRadius.circular(12),
+                                                  BorderRadius.circular(12),
                                             ),
                                           ),
-                                          onPressed: () =>
-                                              _updateBookingStatus(
-                                                  ownerUid,
-                                                  booking['bookingId'],
-                                                  false),
+                                          onPressed: () => _updateBookingStatus(
+                                              ownerUid,
+                                              booking['bookingId'],
+                                              false),
                                           child: const Text("Decline",
                                               style: TextStyle(fontSize: 16)),
                                         ),
@@ -546,12 +534,13 @@ class _OwnerMainScreenState extends State<OwnerMainScreen> {
                                                 vertical: 14),
                                             shape: RoundedRectangleBorder(
                                               borderRadius:
-                                              BorderRadius.circular(12),
+                                                  BorderRadius.circular(12),
                                             ),
                                           ),
-                                          onPressed: () =>
-                                              _updateArrivalStatus(
-                                                  ownerUid, booking['bookingId'], true),
+                                          onPressed: () => _updateArrivalStatus(
+                                              ownerUid,
+                                              booking['bookingId'],
+                                              true),
                                           child: const Text("Customer visited",
                                               style: TextStyle(fontSize: 16)),
                                         ),
@@ -565,12 +554,13 @@ class _OwnerMainScreenState extends State<OwnerMainScreen> {
                                                 vertical: 14),
                                             shape: RoundedRectangleBorder(
                                               borderRadius:
-                                              BorderRadius.circular(12),
+                                                  BorderRadius.circular(12),
                                             ),
                                           ),
-                                          onPressed: () =>
-                                              _updateArrivalStatus(
-                                                  ownerUid, booking['bookingId'], false),
+                                          onPressed: () => _updateArrivalStatus(
+                                              ownerUid,
+                                              booking['bookingId'],
+                                              false),
                                           child: const Text("Not on time",
                                               style: TextStyle(fontSize: 16)),
                                         ),
@@ -580,22 +570,22 @@ class _OwnerMainScreenState extends State<OwnerMainScreen> {
                                 ] else if (status != null) ...[
                                   Text(
                                     arrived == true
-                                        ? "Customer has been visited ✅"
+                                        ? "Customer has been visited"
                                         : arrived == false
-                                        ? "Customer not on time ❌"
-                                        : status
-                                        ? "Booking Accepted ✅"
-                                        : "Booking Declined ❌",
+                                            ? "Customer not on time"
+                                            : status
+                                                ? "Booking Accepted"
+                                                : "Booking Declined",
                                     style: TextStyle(
                                       fontWeight: FontWeight.bold,
                                       fontSize: 16,
                                       color: arrived == true
                                           ? Colors.green
                                           : arrived == false
-                                          ? Colors.red
-                                          : status
-                                          ? Colors.green
-                                          : Colors.red,
+                                              ? Colors.red
+                                              : status
+                                                  ? Colors.green
+                                                  : Colors.red,
                                     ),
                                   ),
                                 ],

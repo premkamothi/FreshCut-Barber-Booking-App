@@ -1,13 +1,9 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
-import 'package:project_sem7/models/shop_profile_model.dart';
-import 'package:project_sem7/uiscreen/main_home_page.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
-import 'package:project_sem7/models/mearge_barber_model.dart';
 import '../providers/booking_provider.dart';
-import '../shop_profile/shop_profile.dart';
 import '../widgets/bottom_action_button.dart';
 
 class ReviewSummary extends StatefulWidget {
@@ -48,7 +44,7 @@ class _ReviewSummaryState extends State<ReviewSummary> {
 
       // Fetch user profile
       final userDoc =
-      await firestore.collection("ProfileDetail").doc(user.uid).get();
+          await firestore.collection("ProfileDetail").doc(user.uid).get();
       final userData = userDoc.data() ?? {};
 
       final userProfile = {
@@ -57,10 +53,10 @@ class _ReviewSummaryState extends State<ReviewSummary> {
         "mobile": userData['mobile'] ?? "No Phone",
       };
 
-      // 👇 Create allowedUserIds with both customer & barber
+      //  Create allowedUserIds with both customer & barber
       final allowedUserIds = [user.uid, provider.barber!.ownerUid];
 
-      // 👇 Generate unique bookingId
+      //  Generate unique bookingId
       final bookingId =
           "${user.uid}_${bookingData['placeId']}_${bookingData['slot']}_${bookingData['date']}";
 
@@ -70,15 +66,15 @@ class _ReviewSummaryState extends State<ReviewSummary> {
         "profile": userProfile,
         "status": null, // pending by default
         "allowedUserIds": allowedUserIds,
-        "bookingId": bookingId, // ✅ added bookingId
+        "bookingId": bookingId, // added bookingId
       };
 
       // Booking map for user doc
       final bookingForUser = {
         ...bookingData,
-        "status": null, // pending by default
+        "status": null,
         "allowedUserIds": allowedUserIds,
-        "bookingId": bookingId, // ✅ added bookingId
+        "bookingId": bookingId,
       };
 
       // Save under Barber's document
@@ -89,7 +85,7 @@ class _ReviewSummaryState extends State<ReviewSummary> {
         "ownerUid": provider.barber!.ownerUid,
         "shopName": provider.barber!.name,
         "bookings": FieldValue.arrayUnion([bookingForBarber]),
-        "allowedUserIds": allowedUserIds, // 👈 added here
+        "allowedUserIds": allowedUserIds,
         "updatedAt": FieldValue.serverTimestamp(),
       }, SetOptions(merge: true));
 
@@ -98,7 +94,7 @@ class _ReviewSummaryState extends State<ReviewSummary> {
         "userId": user.uid,
         "user": userProfile,
         "bookings": FieldValue.arrayUnion([bookingForUser]),
-        "allowedUserIds": allowedUserIds, // 👈 added here
+        "allowedUserIds": allowedUserIds, //
         "updatedAt": FieldValue.serverTimestamp(),
       }, SetOptions(merge: true));
 
@@ -144,7 +140,7 @@ class _ReviewSummaryState extends State<ReviewSummary> {
               title: const Text(
                 "Review Summary",
                 style:
-                TextStyle(color: Colors.black, fontWeight: FontWeight.bold),
+                    TextStyle(color: Colors.black, fontWeight: FontWeight.bold),
               ),
               centerTitle: true,
             ),
@@ -173,7 +169,7 @@ class _ReviewSummaryState extends State<ReviewSummary> {
             title: const Text(
               "Review Summary",
               style:
-              TextStyle(color: Colors.black, fontWeight: FontWeight.bold),
+                  TextStyle(color: Colors.black, fontWeight: FontWeight.bold),
             ),
             centerTitle: true,
           ),
@@ -226,9 +222,9 @@ class _ReviewSummaryState extends State<ReviewSummary> {
                         child: Column(
                           children: [
                             ...services.map((service) => _PriceRow(
-                              service: service['name'],
-                              price: "₹${service['price']}",
-                            )),
+                                  service: service['name'],
+                                  price: "₹${service['price']}",
+                                )),
                             const Divider(thickness: 1),
                             _PriceRow(
                                 service: "Total",

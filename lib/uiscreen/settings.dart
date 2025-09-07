@@ -1,13 +1,13 @@
 import 'package:flutter/material.dart';
-import 'package:project_sem7/shop_profile/edit_shop_profile.dart';
+import 'package:project_sem7/owner/edit_shop_profile.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:project_sem7/shop_registration/shop_regester.dart';
+import 'package:project_sem7/owner/shop_regester.dart';
 import 'package:project_sem7/uiscreen/privacy_policy_page.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'ProfileUpdate.dart';
 import 'StartingPage.dart';
-import 'bottom_nav_bar.dart';
+import '../widgets/bottom_nav_bar.dart';
 
 class Settings extends StatefulWidget {
   const Settings({super.key});
@@ -67,7 +67,7 @@ class _SettingsState extends State<Settings> {
     await FirebaseAuth.instance.signOut();
 
     SharedPreferences prefs = await SharedPreferences.getInstance();
-    await prefs.clear(); // or prefs.setBool('is_logged_in', false);
+    await prefs.clear();
 
     Navigator.pushAndRemoveUntil(
       context,
@@ -144,12 +144,14 @@ class _SettingsState extends State<Settings> {
                         Map<String, dynamic>? shopData;
 
                         // 🔹 Try case where docId = uid
-                        final uidDoc =
-                        await firestore.collection('RegisteredShops').doc(user.uid).get();
+                        final uidDoc = await firestore
+                            .collection('RegisteredShops')
+                            .doc(user.uid)
+                            .get();
 
                         if (uidDoc.exists && uidDoc.data() != null) {
                           shopData = uidDoc.data();
-                          debugPrint("✅ Found shop with docId = uid");
+                          debugPrint("Found shop with docId = uid");
                         } else {
                           // 🔹 Fallback: query by uid field (covers docId = placeId or autoId)
                           final query = await firestore
@@ -160,16 +162,18 @@ class _SettingsState extends State<Settings> {
 
                           if (query.docs.isNotEmpty) {
                             shopData = query.docs.first.data();
-                            debugPrint("✅ Found shop by querying uid field");
+                            debugPrint("Found shop by querying uid field");
                           }
                         }
 
                         if (shopData == null ||
                             shopData['googlePlaceId'] == null ||
                             shopData['ownerUid'] == null) {
-                          debugPrint("❌ shopData missing required fields: $shopData");
+                          debugPrint(
+                              "shopData missing required fields: $shopData");
                           ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(content: Text("No registered shop found")),
+                            const SnackBar(
+                                content: Text("No registered shop found")),
                           );
                           return;
                         }
@@ -177,7 +181,8 @@ class _SettingsState extends State<Settings> {
                         final placeId = shopData['googlePlaceId'] as String;
                         final uid = shopData['ownerUid'] as String;
 
-                        debugPrint("👉 Navigating with googlePlaceId=$placeId, ownerUid=$uid");
+                        debugPrint(
+                            "Navigating with googlePlaceId=$placeId, ownerUid=$uid");
 
                         Navigator.push(
                           context,
@@ -188,17 +193,14 @@ class _SettingsState extends State<Settings> {
                             ),
                           ),
                         );
-
                       } catch (e, st) {
-                        debugPrint("🔥 Error fetching registered shop: $e\n$st");
+                        debugPrint("Error fetching registered shop: $e\n$st");
                         ScaffoldMessenger.of(context).showSnackBar(
                           SnackBar(content: Text("Error: $e")),
                         );
                       }
                     },
                   ),
-
-
                   const Divider(
                     height: 1,
                     color: Colors.white,
@@ -248,11 +250,6 @@ class _SettingsState extends State<Settings> {
                     });
                   },
                 ),
-                // const Divider(
-                //   height: 1,
-                //   color: Colors.white,
-                // ),
-                // Logout
                 ListTile(
                   leading: const Icon(Icons.logout, color: Colors.red),
                   title: const Text(

@@ -5,7 +5,6 @@ import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:http/http.dart' as http;
 
-
 class LocationAndBarberShop extends StatefulWidget {
   const LocationAndBarberShop({super.key});
 
@@ -19,9 +18,6 @@ class _LocationAndBarberShopState extends State<LocationAndBarberShop> {
   Set<Marker> _markers = {};
   String _selectedShopName = '';
   final String apiKey = 'AIzaSyA5xVaMFV6c5rM4BCq1uVzUmXD_MxGwEZY';
-
-
-
 
   @override
   void initState() {
@@ -37,16 +33,19 @@ class _LocationAndBarberShopState extends State<LocationAndBarberShop> {
     serviceEnabled = await Geolocator.isLocationServiceEnabled();
     if (!serviceEnabled) {
       setState(() {
-        _selectedShopName = 'Location services are disabled. Please enable GPS.';
+        _selectedShopName =
+            'Location services are disabled. Please enable GPS.';
       });
       return;
     }
 
     // Step 2: Check permissions
     permission = await Geolocator.checkPermission();
-    if (permission == LocationPermission.denied || permission == LocationPermission.deniedForever) {
+    if (permission == LocationPermission.denied ||
+        permission == LocationPermission.deniedForever) {
       permission = await Geolocator.requestPermission();
-      if (permission != LocationPermission.whileInUse && permission != LocationPermission.always) {
+      if (permission != LocationPermission.whileInUse &&
+          permission != LocationPermission.always) {
         setState(() {
           _selectedShopName = 'Location permission is denied.';
         });
@@ -79,7 +78,6 @@ class _LocationAndBarberShopState extends State<LocationAndBarberShop> {
 
       final response = await http.get(Uri.parse(apiUrl));
       print('Nearby search response: ${response.body}');
-
 
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
@@ -128,40 +126,41 @@ class _LocationAndBarberShopState extends State<LocationAndBarberShop> {
       body: (_currentPosition == null)
           ? const Center(child: CircularProgressIndicator())
           : Stack(
-        children: [
-          GoogleMap(
-            initialCameraPosition: CameraPosition(
-              target: LatLng(_currentPosition!.latitude, _currentPosition!.longitude),
-              zoom: 14,
-            ),
-            onMapCreated: (GoogleMapController controller) {
-              _mapController = controller;
-            },
-            markers: _markers,
-            myLocationEnabled: true,
-            myLocationButtonEnabled: true,
-          ),
-          if (_selectedShopName.isNotEmpty)
-            Positioned(
-              bottom: 20,
-              left: 20,
-              right: 20,
-              child: Container(
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.9),
-                  borderRadius: BorderRadius.circular(12),
+              children: [
+                GoogleMap(
+                  initialCameraPosition: CameraPosition(
+                    target: LatLng(_currentPosition!.latitude,
+                        _currentPosition!.longitude),
+                    zoom: 14,
+                  ),
+                  onMapCreated: (GoogleMapController controller) {
+                    _mapController = controller;
+                  },
+                  markers: _markers,
+                  myLocationEnabled: true,
+                  myLocationButtonEnabled: true,
                 ),
-                child: Text(
-                  _selectedShopName,
-                  style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-                  textAlign: TextAlign.center,
-                ),
-              ),
+                if (_selectedShopName.isNotEmpty)
+                  Positioned(
+                    bottom: 20,
+                    left: 20,
+                    right: 20,
+                    child: Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withOpacity(0.9),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Text(
+                        _selectedShopName,
+                        style: const TextStyle(
+                            fontSize: 16, fontWeight: FontWeight.bold),
+                        textAlign: TextAlign.center,
+                      ),
+                    ),
+                  ),
+              ],
             ),
-        ],
-      ),
     );
   }
 }
-

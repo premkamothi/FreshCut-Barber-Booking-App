@@ -3,7 +3,7 @@ import 'package:provider/provider.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../models/barber_model.dart';
 import '../providers/liked_shops_provider.dart';
-import '../shop_profile/shop_profile.dart';
+import '../uiscreen/shop_profile.dart';
 
 class BarberCardList extends StatefulWidget {
   final List<BarberModel> barbers;
@@ -26,7 +26,7 @@ class _BarberCardListState extends State<BarberCardList> {
 
   Future<void> _loadRegisteredShops() async {
     final snapshot =
-    await FirebaseFirestore.instance.collection('RegisteredShops').get();
+        await FirebaseFirestore.instance.collection('RegisteredShops').get();
     setState(() {
       registeredShops = snapshot.docs.map((doc) => doc.id).toSet();
       _loading = false;
@@ -86,12 +86,12 @@ class _BarberCardListState extends State<BarberCardList> {
                               fit: BoxFit.cover,
                               errorBuilder: (context, error, stackTrace) =>
                                   Container(
-                                    height: 150,
-                                    color: Colors.grey[300],
-                                    alignment: Alignment.center,
-                                    child: const Icon(Icons.image_not_supported,
-                                        size: 60, color: Colors.grey),
-                                  ),
+                                height: 150,
+                                color: Colors.grey[300],
+                                alignment: Alignment.center,
+                                child: const Icon(Icons.image_not_supported,
+                                    size: 60, color: Colors.grey),
+                              ),
                             ),
                           ),
                         ),
@@ -100,9 +100,7 @@ class _BarberCardListState extends State<BarberCardList> {
                           right: 6,
                           child: IconButton(
                             icon: Icon(
-                              isLiked
-                                  ? Icons.favorite
-                                  : Icons.favorite_border,
+                              isLiked ? Icons.favorite : Icons.favorite_border,
                               color: isLiked
                                   ? const Color(0xFFF31E1E)
                                   : Colors.grey[600],
@@ -170,38 +168,38 @@ class _BarberCardListState extends State<BarberCardList> {
                       child: Center(
                         child: isRegistered
                             ? TextButton(
-                          onPressed: () {
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (context) =>
-                                    ShopProfile(barberData: barber),
-                              ),
-                            );
-                          },
-                          style: TextButton.styleFrom(
-                            padding: EdgeInsets.zero,
-                            minimumSize: Size.zero,
-                            tapTargetSize:
-                            MaterialTapTargetSize.shrinkWrap,
-                          ),
-                          child: const Text(
-                            'Book Now',
-                            style: TextStyle(
-                              fontSize: 14,
-                              fontWeight: FontWeight.w500,
-                              color: Colors.black,
-                            ),
-                          ),
-                        )
+                                onPressed: () {
+                                  Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder: (context) =>
+                                          ShopProfile(barberData: barber),
+                                    ),
+                                  );
+                                },
+                                style: TextButton.styleFrom(
+                                  padding: EdgeInsets.zero,
+                                  minimumSize: Size.zero,
+                                  tapTargetSize:
+                                      MaterialTapTargetSize.shrinkWrap,
+                                ),
+                                child: const Text(
+                                  'Book Now',
+                                  style: TextStyle(
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.w500,
+                                    color: Colors.black,
+                                  ),
+                                ),
+                              )
                             : const Text(
-                          "Not Registered",
-                          style: TextStyle(
-                            fontSize: 14,
-                            fontWeight: FontWeight.w500,
-                            color: Colors.black,
-                          ),
-                        ),
+                                "Not Registered",
+                                style: TextStyle(
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.w500,
+                                  color: Colors.black,
+                                ),
+                              ),
                       ),
                     ),
                   ],

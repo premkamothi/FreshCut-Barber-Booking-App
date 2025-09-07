@@ -1,17 +1,10 @@
-import 'dart:developer';
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
-import 'package:google_sign_in/google_sign_in.dart';
-import 'package:project_sem7/Services.dart';
-import 'package:project_sem7/uiscreen/DashboardScreen.dart';
-import 'package:project_sem7/uiscreen/ForgetPassword.dart';
-import 'package:project_sem7/uiscreen/NavBar.bart.dart';
-import 'package:project_sem7/uiscreen/RegisterPage.dart';
-import 'package:project_sem7/uiscreen/Signupowner.dart';
+import 'package:project_sem7/authentication/ForgetPassword.dart';
+import 'package:project_sem7/widgets/NavBar.dart';
+import 'package:project_sem7/authentication/Signupowner.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'bottom_nav_bar.dart';
 
 class Loginowner extends StatefulWidget {
   const Loginowner({super.key});
@@ -26,7 +19,6 @@ class _LoginStateowner extends State<Loginowner> {
   final TextEditingController _passwordController = TextEditingController();
   bool _isPasswordVisible = false;
   String? _authErrorMessage;
-
 
   @override
   Widget build(BuildContext context) {
@@ -49,7 +41,10 @@ class _LoginStateowner extends State<Loginowner> {
                 padding: const EdgeInsets.only(left: 23),
                 child: Text(
                   "Login to your Account",
-                  style: TextStyle(fontSize: 45.sp, fontWeight: FontWeight.bold, color: Colors.black),
+                  style: TextStyle(
+                      fontSize: 45.sp,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.black),
                 ),
               ),
               SizedBox(height: 40.h),
@@ -67,13 +62,15 @@ class _LoginStateowner extends State<Loginowner> {
                           hintStyle: const TextStyle(color: Colors.grey),
                           filled: true,
                           fillColor: Colors.grey.shade50,
-                          prefixIcon: const Icon(Icons.email, color: Colors.black),
+                          prefixIcon:
+                              const Icon(Icons.email, color: Colors.black),
                           enabledBorder: OutlineInputBorder(
                             borderSide: const BorderSide(color: Colors.grey),
                             borderRadius: BorderRadius.circular(10.r),
                           ),
                           focusedBorder: OutlineInputBorder(
-                            borderSide: BorderSide(color: Colors.black, width: 2.w),
+                            borderSide:
+                                BorderSide(color: Colors.black, width: 2.w),
                             borderRadius: BorderRadius.circular(10.r),
                           ),
                         ),
@@ -99,13 +96,17 @@ class _LoginStateowner extends State<Loginowner> {
                           hintStyle: const TextStyle(color: Colors.grey),
                           filled: true,
                           fillColor: Colors.grey.shade50,
-                          prefixIcon: const Icon(Icons.password, color: Colors.black),
+                          prefixIcon:
+                              const Icon(Icons.password, color: Colors.black),
                           suffixIcon: IconButton(
                             onPressed: () {
-                              setState(() => _isPasswordVisible = !_isPasswordVisible);
+                              setState(() =>
+                                  _isPasswordVisible = !_isPasswordVisible);
                             },
                             icon: Icon(
-                              _isPasswordVisible ? Icons.visibility : Icons.visibility_off,
+                              _isPasswordVisible
+                                  ? Icons.visibility
+                                  : Icons.visibility_off,
                               color: Colors.black,
                             ),
                           ),
@@ -114,7 +115,8 @@ class _LoginStateowner extends State<Loginowner> {
                             borderRadius: BorderRadius.circular(10.r),
                           ),
                           focusedBorder: OutlineInputBorder(
-                            borderSide: BorderSide(color: Colors.black, width: 2.w),
+                            borderSide:
+                                BorderSide(color: Colors.black, width: 2.w),
                             borderRadius: BorderRadius.circular(10.r),
                           ),
                         ),
@@ -132,12 +134,14 @@ class _LoginStateowner extends State<Loginowner> {
                         onPressed: () {
                           Navigator.push(
                             context,
-                            MaterialPageRoute(builder: (context) => Forgetpassword()),
+                            MaterialPageRoute(
+                                builder: (context) => Forgetpassword()),
                           );
                         },
                         child: Text(
                           "Forget Password?",
-                          style: TextStyle(color: Colors.orange, fontSize: 15.sp),
+                          style:
+                              TextStyle(color: Colors.orange, fontSize: 15.sp),
                         ),
                       ),
                     ),
@@ -157,21 +161,24 @@ class _LoginStateowner extends State<Loginowner> {
                         onPressed: () async {
                           if (_formkey.currentState!.validate()) {
                             try {
-                              await FirebaseAuth.instance.signInWithEmailAndPassword(
+                              await FirebaseAuth.instance
+                                  .signInWithEmailAndPassword(
                                 email: _emailController.text.trim(),
                                 password: _passwordController.text.trim(),
                               );
 
                               // ✅ Set shared preference flag
-                              final prefs = await SharedPreferences.getInstance();
+                              final prefs =
+                                  await SharedPreferences.getInstance();
                               await prefs.setBool('is_logged_in', true);
                               await prefs.setString('user_type', 'owner');
 
                               if (mounted) {
                                 Navigator.pushReplacement(
-                                  context,
-                                  MaterialPageRoute(builder: (context) => NavBar(),)
-                                );
+                                    context,
+                                    MaterialPageRoute(
+                                      builder: (context) => NavBar(),
+                                    ));
                               }
                             } on FirebaseAuthException catch (e) {
                               String message = '';
@@ -182,7 +189,8 @@ class _LoginStateowner extends State<Loginowner> {
                               }
                               setState(() => _authErrorMessage = message);
                             } catch (e) {
-                              setState(() => _authErrorMessage = 'An error occurred. Please try again.');
+                              setState(() => _authErrorMessage =
+                                  'An error occurred. Please try again.');
                             }
                           }
                         },
@@ -194,22 +202,32 @@ class _LoginStateowner extends State<Loginowner> {
                         ),
                         child: Text(
                           "Login",
-                          style: TextStyle(color: Colors.white, fontSize: 16.sp, fontWeight: FontWeight.bold),
+                          style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 16.sp,
+                              fontWeight: FontWeight.bold),
                         ),
                       ),
                     ),
                     SizedBox(height: 20.h),
                     GestureDetector(
-                      onTap: ()
-                      {
-                        Navigator.push(context, MaterialPageRoute(builder: (context) => Signupowner()));
+                      onTap: () {
+                        Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                                builder: (context) => Signupowner()));
                       },
-                      child: RichText(text: TextSpan(
-                          children: [
-                            TextSpan(text: "Don't have an account?",style: TextStyle(color: Colors.black,fontSize: 14.sp)),
-                            TextSpan(text: " Sign up" ,style: TextStyle(color: Colors.orange,fontSize: 14.sp)),
-                          ]
-                      )),
+                      child: RichText(
+                          text: TextSpan(children: [
+                        TextSpan(
+                            text: "Don't have an account?",
+                            style: TextStyle(
+                                color: Colors.black, fontSize: 14.sp)),
+                        TextSpan(
+                            text: " Sign up",
+                            style: TextStyle(
+                                color: Colors.orange, fontSize: 14.sp)),
+                      ])),
                     ),
                   ],
                 ),

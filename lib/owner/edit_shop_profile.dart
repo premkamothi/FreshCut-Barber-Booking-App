@@ -6,7 +6,7 @@ import 'package:image_picker/image_picker.dart';
 import 'package:intl/intl.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:project_sem7/Services.dart';
+import 'package:project_sem7/owner/Services.dart';
 
 class EditShopProfile extends StatefulWidget {
   final String uid;
@@ -22,7 +22,6 @@ class EditShopProfile extends StatefulWidget {
 }
 
 class _EditShopProfileState extends State<EditShopProfile> {
-
   final TextEditingController _nameController = TextEditingController();
   final List<TextEditingController> _contactControllers = [
     TextEditingController()
@@ -45,7 +44,8 @@ class _EditShopProfileState extends State<EditShopProfile> {
   List<XFile> selectedImages = [];
   List<String> _shopImages = [];
 
-  final String imageKitUploadUrl = 'https://upload.imagekit.io/api/v1/files/upload';
+  final String imageKitUploadUrl =
+      'https://upload.imagekit.io/api/v1/files/upload';
   final String imageKitPrivateKey = 'private_pWr6GTcSorJB7LBrowYhFUndHG0=';
 
   @override
@@ -63,7 +63,7 @@ class _EditShopProfileState extends State<EditShopProfile> {
       File file = File(image.path);
       var request = http.MultipartRequest('POST', Uri.parse(imageKitUploadUrl));
       request.headers['Authorization'] =
-      'Basic ${base64Encode(utf8.encode('$imageKitPrivateKey:'))}';
+          'Basic ${base64Encode(utf8.encode('$imageKitPrivateKey:'))}';
       request.fields['fileName'] = file.path.split('/').last;
       request.fields['useUniqueFileName'] = 'true';
       request.files.add(await http.MultipartFile.fromPath('file', file.path));
@@ -113,7 +113,8 @@ class _EditShopProfileState extends State<EditShopProfile> {
         return;
       }
 
-      debugPrint("Attempting to fetch from RegisteredShops with placeId: ${widget.placeId}");
+      debugPrint(
+          "Attempting to fetch from RegisteredShops with placeId: ${widget.placeId}");
 
       // Step 1: Fetch basic shop data from RegisteredShops using placeId
       DocumentSnapshot registeredShopDoc = await FirebaseFirestore.instance
@@ -125,11 +126,13 @@ class _EditShopProfileState extends State<EditShopProfile> {
 
       if (!registeredShopDoc.exists) {
         setState(() => _loading = false);
-        _showErrorAndNavigateBack("Shop not found in RegisteredShops collection");
+        _showErrorAndNavigateBack(
+            "Shop not found in RegisteredShops collection");
         return;
       }
 
-      final registeredShopData = registeredShopDoc.data() as Map<String, dynamic>;
+      final registeredShopData =
+          registeredShopDoc.data() as Map<String, dynamic>;
       debugPrint("RegisteredShop data: $registeredShopData");
 
       // Step 2: Try to fetch existing profile details from ShopProfileDetails
@@ -150,16 +153,15 @@ class _EditShopProfileState extends State<EditShopProfile> {
         // Get UID from registered shop data
         _currentUid = registeredShopData['ownerUid'] ?? widget.uid;
 
-
         // Basic shop information from RegisteredShops - try different field names
         _nameController.text = registeredShopData['shopName'] ?? '';
         _addressController.text = registeredShopData['address'] ?? '';
 
-
         // Contact numbers from RegisteredShops - try different field names
         String phoneNumber = registeredShopData['number'] ??
             registeredShopData['phoneNumber'] ??
-            registeredShopData['contactNumber'] ?? '';
+            registeredShopData['contactNumber'] ??
+            '';
 
         _contactControllers.clear();
         if (phoneNumber.isNotEmpty) {
@@ -167,10 +169,12 @@ class _EditShopProfileState extends State<EditShopProfile> {
         } else {
           // Try to get from array fields
           List contactNumbers = registeredShopData['contactNumbers'] ??
-              registeredShopData['mobileNumbers'] ?? [];
+              registeredShopData['mobileNumbers'] ??
+              [];
           if (contactNumbers.isNotEmpty) {
             for (var contact in contactNumbers) {
-              _contactControllers.add(TextEditingController(text: contact.toString()));
+              _contactControllers
+                  .add(TextEditingController(text: contact.toString()));
             }
           } else {
             _contactControllers.add(TextEditingController());
@@ -272,12 +276,15 @@ class _EditShopProfileState extends State<EditShopProfile> {
         'shopName': _nameController.text.trim(),
         'shopAddress': _addressController.text.trim(),
         'primaryContactNumber': contacts.isNotEmpty ? contacts.first : null,
-        'additionalContactNumbers': contacts.length > 1 ? contacts.sublist(1) : [],
+        'additionalContactNumbers':
+            contacts.length > 1 ? contacts.sublist(1) : [],
         'websiteLink': _websiteController.text.trim(),
         'aboutShop': _aboutController.text.trim(),
-        'monFriStart': _monToFriStart != null ? formatTime(_monToFriStart) : null,
+        'monFriStart':
+            _monToFriStart != null ? formatTime(_monToFriStart) : null,
         'monFriEnd': _monToFriEnd != null ? formatTime(_monToFriEnd) : null,
-        'satSunStart': _satToSunStart != null ? formatTime(_satToSunStart) : null,
+        'satSunStart':
+            _satToSunStart != null ? formatTime(_satToSunStart) : null,
         'satSunEnd': _satToSunEnd != null ? formatTime(_satToSunEnd) : null,
         // Images field is only for profile gallery images, shopPhotos/specialistPhotos are migrated separately
         'Images': imageUrls,
@@ -287,21 +294,23 @@ class _EditShopProfileState extends State<EditShopProfile> {
       final firestore = FirebaseFirestore.instance;
       final batch = firestore.batch();
 
-      // ✅ Save full profile under ShopProfileDetails/{placeId}
+      // Save full profile under ShopProfileDetails/{placeId}
       final placeIdDoc =
-      firestore.collection('ShopProfileDetails').doc(widget.placeId);
+          firestore.collection('ShopProfileDetails').doc(widget.placeId);
       batch.set(placeIdDoc, profileData, SetOptions(merge: true));
 
-      // ✅ Save full profile under ShopProfileDetails/{uid}
+      // Save full profile under ShopProfileDetails/{uid}
       final uidDoc =
-      firestore.collection('ShopProfileDetails').doc(_currentUid);
+          firestore.collection('ShopProfileDetails').doc(_currentUid);
       batch.set(uidDoc, profileData, SetOptions(merge: true));
 
       await batch.commit();
 
-      // ✅ After saving profile, migrate images from RegisteredShops → ShopProfileDetails
-      await _migrateImagesToShopProfileDetails(_currentUid!, widget.placeId, true);  // specialistPhotos
-      await _migrateImagesToShopProfileDetails(_currentUid!, widget.placeId, false); // shopPhotos
+      // After saving profile, migrate images from RegisteredShops → ShopProfileDetails
+      await _migrateImagesToShopProfileDetails(
+          _currentUid!, widget.placeId, true); // specialistPhotos
+      await _migrateImagesToShopProfileDetails(
+          _currentUid!, widget.placeId, false); // shopPhotos
 
       setState(() => _loading = false);
 
@@ -317,9 +326,6 @@ class _EditShopProfileState extends State<EditShopProfile> {
     }
   }
 
-
-
-
   void _showSnackBar(String message, Color backgroundColor) {
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -331,7 +337,8 @@ class _EditShopProfileState extends State<EditShopProfile> {
     }
   }
 
-  Future<void> _selectTime(BuildContext context, bool isStart, bool isWeekday) async {
+  Future<void> _selectTime(
+      BuildContext context, bool isStart, bool isWeekday) async {
     // Remove focus & close keyboard
     FocusScope.of(context).requestFocus(FocusNode());
 
@@ -373,7 +380,6 @@ class _EditShopProfileState extends State<EditShopProfile> {
     return DateFormat.jm().format(dt);
   }
 
-
   @override
   Widget build(BuildContext context) {
     const lightGrey = Color(0xFFF2F2F2);
@@ -398,94 +404,98 @@ class _EditShopProfileState extends State<EditShopProfile> {
       ),
       body: _loading
           ? const Center(
-        child: CircularProgressIndicator(color: Colors.orange),
-      )
+              child: CircularProgressIndicator(color: Colors.orange),
+            )
           : SingleChildScrollView(
-        padding: const EdgeInsets.all(12),
-        child: Column(
-          children: [
-            // Shop Name
-            _buildCardTextField(
-              _nameController,
-              "Shop Name",
-              lightGrey,
-            ),
-            const SizedBox(height: 10),
-
-            // Contact Numbers (Dynamic)
-            ..._buildContactNumberFields(lightGrey),
-            const SizedBox(height: 10),
-
-            // Shop Address
-            _buildCardTextField(
-              _addressController,
-              "Shop Address",
-              lightGrey,
-              maxLines: 2,
-            ),
-            const SizedBox(height: 10),
-
-            // Website Link
-            _buildCardTextField(
-              _websiteController,
-              "Website Link (Optional)",
-              lightGrey,
-            ),
-            const SizedBox(height: 10),
-
-            // About Shop
-            _buildCardTextField(
-              _aboutController,
-              "About Your Shop (Optional)",
-              lightGrey,
-              maxLines: 6,
-              focusNode: _aboutFocus,
-            ),
-            const SizedBox(height: 20),
-
-            // Working Hours
-            _buildTimeSection(
-              "Mon - Fri",
-              _monToFriStart,
-              _monToFriEnd,
-              true,
-              lightGrey,
-              mediumGreyBorder,
-            ),
-            const SizedBox(height: 10),
-            _buildTimeSection(
-              "Sat - Sun",
-              _satToSunStart,
-              _satToSunEnd,
-              false,
-              lightGrey,
-              mediumGreyBorder,
-            ),
-            SizedBox(height: 10),
-            _buildPhotoSection("Add Photos", lightGrey, mediumGreyBorder, false),
-            _buildPhotoSection("Add Photos of your Specialists", lightGrey, mediumGreyBorder,true),
-            const SizedBox(height: 20),
-            // Manage Services
-            ListTile(
-              leading: const Icon(Icons.build, color: Colors.orange),
-              title: const Text(
-                "Manage Services",
-                style: TextStyle(fontWeight: FontWeight.w500),
-              ),
-              trailing: const Icon(Icons.chevron_right, color: Colors.grey),
-              onTap: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => Services(placeId: widget.placeId),
+              padding: const EdgeInsets.all(12),
+              child: Column(
+                children: [
+                  // Shop Name
+                  _buildCardTextField(
+                    _nameController,
+                    "Shop Name",
+                    lightGrey,
                   ),
-                );
-              },
+                  const SizedBox(height: 10),
+
+                  // Contact Numbers (Dynamic)
+                  ..._buildContactNumberFields(lightGrey),
+                  const SizedBox(height: 10),
+
+                  // Shop Address
+                  _buildCardTextField(
+                    _addressController,
+                    "Shop Address",
+                    lightGrey,
+                    maxLines: 2,
+                  ),
+                  const SizedBox(height: 10),
+
+                  // Website Link
+                  _buildCardTextField(
+                    _websiteController,
+                    "Website Link (Optional)",
+                    lightGrey,
+                  ),
+                  const SizedBox(height: 10),
+
+                  // About Shop
+                  _buildCardTextField(
+                    _aboutController,
+                    "About Your Shop (Optional)",
+                    lightGrey,
+                    maxLines: 6,
+                    focusNode: _aboutFocus,
+                  ),
+                  const SizedBox(height: 20),
+
+                  // Working Hours
+                  _buildTimeSection(
+                    "Mon - Fri",
+                    _monToFriStart,
+                    _monToFriEnd,
+                    true,
+                    lightGrey,
+                    mediumGreyBorder,
+                  ),
+                  const SizedBox(height: 10),
+                  _buildTimeSection(
+                    "Sat - Sun",
+                    _satToSunStart,
+                    _satToSunEnd,
+                    false,
+                    lightGrey,
+                    mediumGreyBorder,
+                  ),
+                  SizedBox(height: 10),
+                  _buildPhotoSection(
+                      "Add Photos", lightGrey, mediumGreyBorder, false),
+                  _buildPhotoSection("Add Photos of your Specialists",
+                      lightGrey, mediumGreyBorder, true),
+                  const SizedBox(height: 20),
+                  // Manage Services
+                  ListTile(
+                    leading: const Icon(Icons.build, color: Colors.orange),
+                    title: const Text(
+                      "Manage Services",
+                      style: TextStyle(fontWeight: FontWeight.w500),
+                    ),
+                    trailing:
+                        const Icon(Icons.chevron_right, color: Colors.grey),
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) =>
+                              Services(placeId: widget.placeId),
+                        ),
+                      );
+                    },
+                  ),
+                  const SizedBox(height: 20),
+                ],
+              ),
             ),
-            const SizedBox(height: 20),
-          ],
-        ),
-      ),
       bottomNavigationBar: SafeArea(
         child: Container(
           color: Colors.white,
@@ -503,21 +513,21 @@ class _EditShopProfileState extends State<EditShopProfile> {
               ),
               child: _loading
                   ? const SizedBox(
-                height: 20,
-                width: 20,
-                child: CircularProgressIndicator(
-                  color: Colors.white,
-                  strokeWidth: 2,
-                ),
-              )
+                      height: 20,
+                      width: 20,
+                      child: CircularProgressIndicator(
+                        color: Colors.white,
+                        strokeWidth: 2,
+                      ),
+                    )
                   : const Text(
-                "Update",
-                style: TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.white,
-                ),
-              ),
+                      "Update",
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white,
+                      ),
+                    ),
             ),
           ),
         ),
@@ -525,14 +535,13 @@ class _EditShopProfileState extends State<EditShopProfile> {
     );
   }
 
-
   Widget _buildCardTextField(
-      TextEditingController controller,
-      String hintText,
-      Color bgColor, {
-        int maxLines = 1,
-        FocusNode? focusNode,
-      }) {
+    TextEditingController controller,
+    String hintText,
+    Color bgColor, {
+    int maxLines = 1,
+    FocusNode? focusNode,
+  }) {
     return Card(
       color: bgColor,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
@@ -567,7 +576,8 @@ class _EditShopProfileState extends State<EditShopProfile> {
                   bgColor,
                 ),
               ),
-              if (i == _contactControllers.length - 1 && _contactControllers.length < 5)
+              if (i == _contactControllers.length - 1 &&
+                  _contactControllers.length < 5)
                 IconButton(
                   icon: const Icon(Icons.add, color: Colors.orange),
                   onPressed: () {
@@ -595,13 +605,13 @@ class _EditShopProfileState extends State<EditShopProfile> {
   }
 
   Widget _buildTimeSection(
-      String label,
-      TimeOfDay? start,
-      TimeOfDay? end,
-      bool isWeekday,
-      Color bgColor,
-      Color borderColor,
-      ) {
+    String label,
+    TimeOfDay? start,
+    TimeOfDay? end,
+    bool isWeekday,
+    Color bgColor,
+    Color borderColor,
+  ) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -664,7 +674,7 @@ class _EditShopProfileState extends State<EditShopProfile> {
             style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
         const SizedBox(height: 10),
 
-        /// ✅ Listen to both ShopProfileDetails and RegisteredShops
+        ///  Listen to both ShopProfileDetails and RegisteredShops
         StreamBuilder<DocumentSnapshot>(
           stream: FirebaseFirestore.instance
               .collection('ShopProfileDetails')
@@ -684,17 +694,17 @@ class _EditShopProfileState extends State<EditShopProfile> {
                 final registeredData =
                     regSnap.data?.data() as Map<String, dynamic>? ?? {};
 
-                // ✅ Use ShopProfileDetails images if doc exists, else fallback to RegisteredShops
+                // Use ShopProfileDetails images if doc exists, else fallback to RegisteredShops
                 final images = List<String>.from(
                   shopDetailsExists
                       ? shopDetailsData[isSpecialist
-                      ? 'specialistPhotos'
-                      : 'shopPhotos'] ??
-                      []
+                              ? 'specialistPhotos'
+                              : 'shopPhotos'] ??
+                          []
                       : registeredData[isSpecialist
-                      ? 'specialistPhotos'
-                      : 'shopPhotos'] ??
-                      [],
+                              ? 'specialistPhotos'
+                              : 'shopPhotos'] ??
+                          [],
                 );
 
                 final placeId = shopDetailsData['placeId'] ?? "";
@@ -706,27 +716,28 @@ class _EditShopProfileState extends State<EditShopProfile> {
                     itemCount: images.length + 1,
                     itemBuilder: (context, index) {
                       if (index == images.length) {
-                        // ➕ Add new photo container
+                        //  Add new photo container
                         return GestureDetector(
                           onTap: () async {
-                            final picked =
-                            await _picker.pickImage(source: ImageSource.gallery);
+                            final picked = await _picker.pickImage(
+                                source: ImageSource.gallery);
                             if (picked != null) {
                               File file = File(picked.path);
                               var request = http.MultipartRequest(
                                   'POST', Uri.parse(imageKitUploadUrl));
                               request.headers['Authorization'] =
-                              'Basic ${base64Encode(utf8.encode('$imageKitPrivateKey:'))}';
+                                  'Basic ${base64Encode(utf8.encode('$imageKitPrivateKey:'))}';
                               request.fields['fileName'] =
                                   file.path.split('/').last;
                               request.fields['useUniqueFileName'] = 'true';
-                              request.files.add(await http.MultipartFile.fromPath(
-                                  'file', file.path));
+                              request.files.add(
+                                  await http.MultipartFile.fromPath(
+                                      'file', file.path));
 
                               try {
                                 final response = await request.send();
                                 final responseData =
-                                await response.stream.bytesToString();
+                                    await response.stream.bytesToString();
                                 final decoded = json.decode(responseData);
 
                                 if (response.statusCode == 200) {
@@ -740,24 +751,27 @@ class _EditShopProfileState extends State<EditShopProfile> {
                                   };
 
                                   if (shopDetailsExists) {
-                                    // ✅ Save under ShopProfileDetails
+                                    // Save under ShopProfileDetails
                                     await FirebaseFirestore.instance
                                         .collection('ShopProfileDetails')
                                         .doc(uid)
-                                        .set(updateData, SetOptions(merge: true));
+                                        .set(updateData,
+                                            SetOptions(merge: true));
 
                                     if (placeId.isNotEmpty) {
                                       await FirebaseFirestore.instance
                                           .collection('ShopProfileDetails')
                                           .doc(placeId)
-                                          .set(updateData, SetOptions(merge: true));
+                                          .set(updateData,
+                                              SetOptions(merge: true));
                                     }
                                   } else {
-                                    // ✅ Save under RegisteredShops if profile not built yet
+                                    // Save under RegisteredShops if profile not built yet
                                     await FirebaseFirestore.instance
                                         .collection('RegisteredShops')
                                         .doc(uid)
-                                        .set(updateData, SetOptions(merge: true));
+                                        .set(updateData,
+                                            SetOptions(merge: true));
                                   }
                                 }
                               } catch (e) {
@@ -787,7 +801,7 @@ class _EditShopProfileState extends State<EditShopProfile> {
                         );
                       }
 
-                      // 🖼 Existing uploaded image with ❌ remove button
+                      // Existing uploaded image with remove button
                       return Padding(
                         padding: const EdgeInsets.only(right: 12),
                         child: Stack(
@@ -824,8 +838,8 @@ class _EditShopProfileState extends State<EditShopProfile> {
                                         .collection('ShopProfileDetails')
                                         .doc(uid)
                                         .update({
-                                      fieldName:
-                                      FieldValue.arrayRemove([images[index]])
+                                      fieldName: FieldValue.arrayRemove(
+                                          [images[index]])
                                     });
 
                                     if (placeId.isNotEmpty) {
@@ -843,8 +857,8 @@ class _EditShopProfileState extends State<EditShopProfile> {
                                         .collection('RegisteredShops')
                                         .doc(uid)
                                         .update({
-                                      fieldName:
-                                      FieldValue.arrayRemove([images[index]])
+                                      fieldName: FieldValue.arrayRemove(
+                                          [images[index]])
                                     });
                                   }
                                 },
@@ -873,7 +887,8 @@ class _EditShopProfileState extends State<EditShopProfile> {
     );
   }
 
-  Future<void> _migrateImagesToShopProfileDetails(String uid, String placeId, bool isSpecialist) async {
+  Future<void> _migrateImagesToShopProfileDetails(
+      String uid, String placeId, bool isSpecialist) async {
     final regDoc = await FirebaseFirestore.instance
         .collection('RegisteredShops')
         .doc(uid)
@@ -887,7 +902,7 @@ class _EditShopProfileState extends State<EditShopProfile> {
       if (images.isNotEmpty) {
         final updateData = {fieldName: images};
 
-        // ✅ Create ShopProfileDetails with the existing RegisteredShops images
+        // Create ShopProfileDetails with the existing RegisteredShops images
         await FirebaseFirestore.instance
             .collection('ShopProfileDetails')
             .doc(uid)
@@ -902,5 +917,4 @@ class _EditShopProfileState extends State<EditShopProfile> {
       }
     }
   }
-
 }

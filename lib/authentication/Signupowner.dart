@@ -2,45 +2,26 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
-import 'package:google_sign_in/google_sign_in.dart';
 import 'package:project_sem7/uiscreen/Profile.dart';
-import 'package:shared_preferences/shared_preferences.dart';
-import 'bottom_nav_bar.dart';
 
-class Signup extends StatefulWidget {
-  const Signup({super.key});
+class Signupowner extends StatefulWidget {
+  const Signupowner({super.key});
 
   @override
-  State<Signup> createState() => _SignupState();
+  State<Signupowner> createState() => _SignupownerState();
 }
 
-class _SignupState extends State<Signup> with RouteAware {
-
+class _SignupownerState extends State<Signupowner> with RouteAware {
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
   final TextEditingController _nameController = TextEditingController();
   final TextEditingController _mobileNumberController = TextEditingController();
 
   bool _isPasswordVisible = false;
-  bool _ownerRole = false;
-
   String? nameError;
   String? emailError;
   String? mobileError;
   String? passwordError;
-
-  @override
-  void initState() {
-    super.initState();
-    _clearFields(); // Ensure cleared initially
-  }
-
-  void _clearFields() {
-    _emailController.clear();
-    _passwordController.clear();
-    _nameController.clear();
-    _mobileNumberController.clear();
-  }
 
   @override
   void dispose() {
@@ -53,26 +34,27 @@ class _SignupState extends State<Signup> with RouteAware {
 
   void validateFields() {
     setState(() {
-      nameError = _nameController.text.isEmpty ? "Please enter your name" : null;
+      nameError =
+          _nameController.text.isEmpty ? "Please enter your name" : null;
       emailError = _emailController.text.isEmpty
           ? "Please enter the email"
           : (!_emailController.text.contains("@gmail.com")
-          ? "Please enter valid email"
-          : null);
+              ? "Please enter valid email"
+              : null);
       mobileError = _mobileNumberController.text.isEmpty
           ? "Please enter your mobile number"
           : (!RegExp(r'^\d{10}$').hasMatch(_mobileNumberController.text)
-          ? "Enter a valid 10-digit number"
-          : null);
+              ? "Enter a valid 10-digit number"
+              : null);
       passwordError = _passwordController.text.isEmpty
           ? "Please enter the password"
           : (_passwordController.text.length < 6
-          ? "Password must be at least 6 characters"
-          : (!RegExp(r'[A-Za-z]').hasMatch(_passwordController.text)
-          ? "Password must contain a letter"
-          : (!RegExp(r'\d').hasMatch(_passwordController.text)
-          ? "Password must contain a number"
-          : null)));
+              ? "Password must be at least 6 characters"
+              : (!RegExp(r'[A-Za-z]').hasMatch(_passwordController.text)
+                  ? "Password must contain a letter"
+                  : (!RegExp(r'\d').hasMatch(_passwordController.text)
+                      ? "Password must contain a number"
+                      : null)));
     });
   }
 
@@ -87,22 +69,21 @@ class _SignupState extends State<Signup> with RouteAware {
         'signupMethod': 'manual', // To differentiate from Google signup
         'timestamp': FieldValue.serverTimestamp(),
         'isProfileCompleted': false, // They need to complete profile next
-        'ownerRole' : false,
+        'ownerRole': true,
       };
 
-      // Save to CustomerSignupDetails collection
+      // Save to OwnerSignupDetails collection
       await FirebaseFirestore.instance
-          .collection('CustomerSignupDetails')
+          .collection('OwnerSignupDetails')
           .doc(uid)
           .set(data);
 
-      print('Manual signup data saved to CustomerSignupDetails');
+      print('Manual signup data saved to OwnerSignupDetails');
     } catch (e) {
       print('Error saving manual signup data: $e');
       // Still continue to profile page even if this fails
     }
   }
-
 
   @override
   Widget build(BuildContext context) {
@@ -122,12 +103,15 @@ class _SignupState extends State<Signup> with RouteAware {
         body: SingleChildScrollView(
           child: Column(
             children: [
-              SizedBox(height: 80.h),
+              SizedBox(
+                height: 80.h,
+              ),
               Padding(
                 padding: const EdgeInsets.only(left: 23),
                 child: Text(
-                  "Create your Account",
-                  style: TextStyle(fontSize: 45.sp, fontWeight: FontWeight.bold),
+                  "Create Owner Account",
+                  style:
+                      TextStyle(fontSize: 45.sp, fontWeight: FontWeight.bold),
                 ),
               ),
               SizedBox(height: 40.h),
@@ -172,7 +156,9 @@ class _SignupState extends State<Signup> with RouteAware {
                     _isPasswordVisible = !_isPasswordVisible;
                   }),
                   icon: Icon(
-                    _isPasswordVisible ? Icons.visibility : Icons.visibility_off,
+                    _isPasswordVisible
+                        ? Icons.visibility
+                        : Icons.visibility_off,
                     color: Colors.black,
                   ),
                 ),
@@ -191,7 +177,9 @@ class _SignupState extends State<Signup> with RouteAware {
                         passwordError == null) {
                       try {
                         // Create Firebase Auth user
-                        UserCredential userCredential = await FirebaseAuth.instance.createUserWithEmailAndPassword(
+                        UserCredential userCredential = await FirebaseAuth
+                            .instance
+                            .createUserWithEmailAndPassword(
                           email: _emailController.text.trim(),
                           password: _passwordController.text.trim(),
                         );
@@ -204,12 +192,14 @@ class _SignupState extends State<Signup> with RouteAware {
                         if (mounted) {
                           Navigator.pushReplacement(
                             context,
-                            MaterialPageRoute(builder: (context) => const Profile()),
+                            MaterialPageRoute(
+                                builder: (context) => const Profile()),
                           );
                         }
                       } on FirebaseAuthException catch (e) {
                         ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(content: Text("Signup failed: ${e.message}")),
+                          SnackBar(
+                              content: Text("Signup failed: ${e.message}")),
                         );
                       }
                     }
@@ -272,8 +262,8 @@ class CustomTextField extends StatelessWidget {
           hintStyle: TextStyle(
             color: errorMessage != null ? Colors.red : Colors.grey,
           ),
-          prefixIcon:
-          Icon(icon, color: errorMessage != null ? Colors.red : Colors.black),
+          prefixIcon: Icon(icon,
+              color: errorMessage != null ? Colors.red : Colors.black),
           suffixIcon: suffixIcon,
           filled: true,
           fillColor: Colors.grey.shade50,

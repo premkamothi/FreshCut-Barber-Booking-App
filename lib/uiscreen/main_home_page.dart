@@ -6,11 +6,11 @@ import 'package:http/http.dart' as http;
 import 'package:project_sem7/uiscreen/ProfileUpdate.dart';
 import '../models/barber_model.dart';
 import '../widgets/custom_search_bar.dart';
-import 'barber_card_list.dart';
+import '../widgets/barber_card_list.dart';
 import 'package:geolocator/geolocator.dart';
 import 'city_barber_list_screen.dart';
 import 'notification.dart';
-import 'Login.dart'; //
+import '../authentication/Login.dart'; //
 
 class MainHomePage extends StatefulWidget {
   const MainHomePage({super.key});
@@ -24,8 +24,8 @@ class GooglePlacesService {
 
   Future<List<BarberModel>> getNearbyBarbers(
       double userLat, double userLng) async {
-    final url = Uri.parse(
-        'https://maps.googleapis.com/maps/api/place/nearbysearch/json'
+    final url =
+        Uri.parse('https://maps.googleapis.com/maps/api/place/nearbysearch/json'
             '?location=$userLat,$userLng'
             '&radius=5000'
             '&type=hair_care'
@@ -41,7 +41,7 @@ class GooglePlacesService {
         final lng = place['geometry']['location']['lng'];
 
         final distanceInMeters =
-        Geolocator.distanceBetween(userLat, userLng, lat, lng);
+            Geolocator.distanceBetween(userLat, userLng, lat, lng);
         final distanceKm = distanceInMeters / 1000;
 
         return BarberModel(
@@ -134,22 +134,28 @@ Future<String> getCityFromCoordinates(double lat, double lng) async {
 
 class _MainHomePageState extends State<MainHomePage> {
   late Future<List<BarberModel>> _barberFuture;
-  final List<String> _services = ["All","Hair Cut", "Facial", "Hair Color", "Hair Spa"];
+  final List<String> _services = [
+    "All",
+    "Hair Cut",
+    "Facial",
+    "Hair Color",
+    "Hair Spa"
+  ];
   String _selectedService = "All";
 
   @override
   void initState() {
     super.initState();
 
-    // ✅ Start location + barbers loading
+    // Start location + barbers loading
     _barberFuture = _getCurrentPosition()
         .then((position) => GooglePlacesService()
-        .getNearbyBarbers(position.latitude, position.longitude))
+            .getNearbyBarbers(position.latitude, position.longitude))
         .catchError((e) {
       return <BarberModel>[];
     });
 
-    // ✅ Check if blocked on app start
+    // Check if blocked on app start
     _checkBlockedStatus();
   }
 
@@ -169,7 +175,7 @@ class _MainHomePageState extends State<MainHomePage> {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
-              content: Text("🚫 Your account has been blocked."),
+              content: Text("Your account has been blocked."),
               backgroundColor: Colors.red,
             ),
           );
@@ -177,7 +183,7 @@ class _MainHomePageState extends State<MainHomePage> {
           Navigator.pushAndRemoveUntil(
             context,
             MaterialPageRoute(builder: (context) => const Login()),
-                (route) => false,
+            (route) => false,
           );
         }
       }
@@ -250,8 +256,7 @@ class _MainHomePageState extends State<MainHomePage> {
                 SizedBox(
                   height: 36,
                   width: 36,
-                  child: Image.asset(
-                      "assets/images/new_logo_1 - Copy.png"),
+                  child: Image.asset("assets/images/new_logo_1 - Copy.png"),
                 ),
                 const Text(
                   "FreshCut",
@@ -260,15 +265,19 @@ class _MainHomePageState extends State<MainHomePage> {
                 const Spacer(),
                 IconButton(
                   onPressed: () {
-                    Navigator.push(context,
-                        MaterialPageRoute(builder: (context) => NotificationScreen()));
+                    Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                            builder: (context) => NotificationScreen()));
                   },
                   icon: const Icon(Icons.notifications_active_outlined),
                 ),
                 IconButton(
                   onPressed: () {
-                    Navigator.push(context,
-                        MaterialPageRoute(builder: (context) => Profileupdate()));
+                    Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                            builder: (context) => Profileupdate()));
                   },
                   icon: const Icon(Icons.account_circle_outlined),
                 ),
@@ -285,7 +294,8 @@ class _MainHomePageState extends State<MainHomePage> {
                 final userName = snapshot.data!['name'] ?? '';
                 return Text(
                   _getGreetingMessage(userName),
-                  style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
+                  style: const TextStyle(
+                      fontSize: 16, fontWeight: FontWeight.w500),
                 );
               },
             )
@@ -308,20 +318,22 @@ class _MainHomePageState extends State<MainHomePage> {
               padding: const EdgeInsets.only(bottom: 20),
               children: [
                 Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                   child: CustomSearchBar(
                     controller: TextEditingController(),
                     onChanged: (value) {},
                   ),
                 ),
                 Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
                   child: Row(
                     children: [
                       const Text(
                         "Nearby Your Barber",
-                        style:
-                        TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                        style: TextStyle(
+                            fontSize: 16, fontWeight: FontWeight.bold),
                       ),
                       const Spacer(),
                       TextButton(
@@ -343,8 +355,8 @@ class _MainHomePageState extends State<MainHomePage> {
                           } catch (e) {
                             ScaffoldMessenger.of(context).showSnackBar(
                               const SnackBar(
-                                  content:
-                                  Text("Failed to fetch city. Please try again.")),
+                                  content: Text(
+                                      "Failed to fetch city. Please try again.")),
                             );
                           }
                         },

@@ -1,13 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
-import 'package:project_sem7/uiscreen/NavBar.bart.dart';
+import 'package:project_sem7/widgets/NavBar.dart';
 import 'package:project_sem7/uiscreen/StartingPage.dart';
-import 'package:project_sem7/uiscreen/bottom_nav_bar.dart';
+import 'package:project_sem7/widgets/bottom_nav_bar.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:provider/provider.dart';
 import 'package:project_sem7/providers/liked_shops_provider.dart';
-import 'package:project_sem7/providers/booking_provider.dart'; // Add this import
+import 'package:project_sem7/providers/booking_provider.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -20,7 +20,7 @@ void main() async {
   Widget initialScreen;
 
   if (!isLoggedIn) {
-    initialScreen = Startingpage(); // choose owner or customer
+    initialScreen = Startingpage();
   } else if (userType == 'owner') {
     initialScreen = NavBar();
   } else if (userType == 'customer') {

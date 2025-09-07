@@ -4,7 +4,6 @@ import 'package:provider/provider.dart';
 import 'package:table_calendar/table_calendar.dart';
 import 'package:intl/intl.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-
 import '../models/mearge_barber_model.dart';
 import '../providers/booking_provider.dart';
 import 'review_summary.dart';
@@ -24,8 +23,7 @@ class _BookNowPageState extends State<BookNowPage> {
   DateTime? _selectedDay;
   int selectedTimeIndex = -1;
   List<String> timeSlots = [];
-  Set<String> bookedSlots = {}; // Already booked slots
-
+  Set<String> bookedSlots = {};
   late String? monFriStart;
   late String? monFriEnd;
   late String? satSunStart;
@@ -88,7 +86,7 @@ class _BookNowPageState extends State<BookNowPage> {
     return TimeOfDay.fromDateTime(dt);
   }
 
-  /// Fetch already booked slots for the selected barber & date
+  // Fetch already booked slots for the selected barber & date
   Future<void> _fetchBookedSlots(DateTime day) async {
     try {
       final snapshot = await FirebaseFirestore.instance
@@ -121,7 +119,8 @@ class _BookNowPageState extends State<BookNowPage> {
   void _generateTimeSlots(DateTime day) {
     List<String> slots = [];
 
-    bool isWeekend = (day.weekday == DateTime.saturday || day.weekday == DateTime.sunday);
+    bool isWeekend =
+        (day.weekday == DateTime.saturday || day.weekday == DateTime.sunday);
     String? startStr = isWeekend ? satSunStart : monFriStart;
     String? endStr = isWeekend ? satSunEnd : monFriEnd;
 
@@ -137,8 +136,10 @@ class _BookNowPageState extends State<BookNowPage> {
     TimeOfDay end = _parseTime(endStr);
 
     DateTime now = DateTime.now();
-    DateTime startDateTime = DateTime(day.year, day.month, day.day, start.hour, start.minute);
-    DateTime endDateTime = DateTime(day.year, day.month, day.day, end.hour, end.minute);
+    DateTime startDateTime =
+        DateTime(day.year, day.month, day.day, start.hour, start.minute);
+    DateTime endDateTime =
+        DateTime(day.year, day.month, day.day, end.hour, end.minute);
 
     DateTime slot = startDateTime;
 
@@ -146,12 +147,16 @@ class _BookNowPageState extends State<BookNowPage> {
       DateTime slotEnd = slot.add(const Duration(hours: 1));
       if (slotEnd.isAfter(endDateTime)) break;
 
-      if (day.year == now.year && day.month == now.month && day.day == now.day) {
+      if (day.year == now.year &&
+          day.month == now.month &&
+          day.day == now.day) {
         if (slot.isAfter(now)) {
-          slots.add("${DateFormat.jm().format(slot)} - ${DateFormat.jm().format(slotEnd)}");
+          slots.add(
+              "${DateFormat.jm().format(slot)} - ${DateFormat.jm().format(slotEnd)}");
         }
       } else {
-        slots.add("${DateFormat.jm().format(slot)} - ${DateFormat.jm().format(slotEnd)}");
+        slots.add(
+            "${DateFormat.jm().format(slot)} - ${DateFormat.jm().format(slotEnd)}");
       }
 
       slot = slotEnd;
@@ -169,9 +174,9 @@ class _BookNowPageState extends State<BookNowPage> {
     final selectedServices = services
         .where((s) => s["selected"] == true)
         .map((s) => {
-      "name": s["name"],
-      "price": s["price"],
-    })
+              "name": s["name"],
+              "price": s["price"],
+            })
         .toList();
 
     if (selectedServices.isEmpty) {
@@ -241,10 +246,12 @@ class _BookNowPageState extends State<BookNowPage> {
                 children: [
                   // SERVICES SECTION
                   Padding(
-                    padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 8.h),
+                    padding:
+                        EdgeInsets.symmetric(horizontal: 16.w, vertical: 8.h),
                     child: Text(
                       "Select Services",
-                      style: TextStyle(fontSize: 18.sp, fontWeight: FontWeight.bold),
+                      style: TextStyle(
+                          fontSize: 18.sp, fontWeight: FontWeight.bold),
                     ),
                   ),
                   Padding(
@@ -276,7 +283,8 @@ class _BookNowPageState extends State<BookNowPage> {
                                   SizedBox(width: 12.w),
                                   Expanded(
                                     child: Column(
-                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
                                       children: [
                                         Text(
                                           service["name"],
@@ -321,10 +329,12 @@ class _BookNowPageState extends State<BookNowPage> {
 
                   // DATE SELECTION
                   Padding(
-                    padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 8.h),
+                    padding:
+                        EdgeInsets.symmetric(horizontal: 16.w, vertical: 8.h),
                     child: Text(
                       "Select Date",
-                      style: TextStyle(fontSize: 18.sp, fontWeight: FontWeight.bold),
+                      style: TextStyle(
+                          fontSize: 18.sp, fontWeight: FontWeight.bold),
                     ),
                   ),
                   Container(
@@ -334,7 +344,8 @@ class _BookNowPageState extends State<BookNowPage> {
                       lastDay: DateTime.now().add(const Duration(days: 365)),
                       focusedDay: _focusedDay,
                       calendarFormat: CalendarFormat.month,
-                      selectedDayPredicate: (day) => isSameDay(_selectedDay, day),
+                      selectedDayPredicate: (day) =>
+                          isSameDay(_selectedDay, day),
                       onDaySelected: (selectedDay, focusedDay) {
                         setState(() {
                           _selectedDay = selectedDay;
@@ -363,15 +374,18 @@ class _BookNowPageState extends State<BookNowPage> {
 
                   // TIME SLOTS
                   Padding(
-                    padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 8.h),
+                    padding:
+                        EdgeInsets.symmetric(horizontal: 16.w, vertical: 8.h),
                     child: Text(
                       "Select Time Slot",
-                      style: TextStyle(fontSize: 18.sp, fontWeight: FontWeight.bold),
+                      style: TextStyle(
+                          fontSize: 18.sp, fontWeight: FontWeight.bold),
                     ),
                   ),
                   if (timeSlots.isEmpty)
                     Padding(
-                      padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 4.h),
+                      padding:
+                          EdgeInsets.symmetric(horizontal: 16.w, vertical: 4.h),
                       child: Text(
                         "No slots available for this day.",
                         style: TextStyle(
@@ -396,10 +410,10 @@ class _BookNowPageState extends State<BookNowPage> {
                             onTap: isBooked
                                 ? null
                                 : () {
-                              setState(() {
-                                selectedTimeIndex = index;
-                              });
-                            },
+                                    setState(() {
+                                      selectedTimeIndex = index;
+                                    });
+                                  },
                             child: Container(
                               margin: EdgeInsets.symmetric(horizontal: 4.w),
                               height: 50.h,
@@ -409,8 +423,8 @@ class _BookNowPageState extends State<BookNowPage> {
                                 color: isBooked
                                     ? Colors.grey
                                     : selectedTimeIndex == index
-                                    ? Colors.orange
-                                    : Colors.white,
+                                        ? Colors.orange
+                                        : Colors.white,
                                 border: Border.all(
                                   color: isBooked ? Colors.grey : Colors.orange,
                                   width: 2,
@@ -423,8 +437,8 @@ class _BookNowPageState extends State<BookNowPage> {
                                   color: isBooked
                                       ? Colors.white
                                       : selectedTimeIndex == index
-                                      ? Colors.white
-                                      : Colors.orange,
+                                          ? Colors.white
+                                          : Colors.orange,
                                   fontWeight: FontWeight.bold,
                                   fontSize: 12.sp,
                                 ),

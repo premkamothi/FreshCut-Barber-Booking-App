@@ -1,10 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/rendering.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'dart:async';
-
 import 'package:project_sem7/uiscreen/RoleSelectionPage.dart';
-
 
 class Startingpage extends StatefulWidget {
   const Startingpage({super.key});
@@ -52,14 +49,14 @@ class _StartingpageState extends State<Startingpage> {
     });
   }
 
-
   void _nextPage() {
     if (currentPage < data.length - 1) {
       _controller.nextPage(
           duration: const Duration(milliseconds: 300), curve: Curves.easeIn);
     } else {
       _timer?.cancel(); // Stop timer if user manually clicks Get Started
-      Navigator.push(context, MaterialPageRoute(builder: (_) => RoleSelectionPage()));
+      Navigator.push(
+          context, MaterialPageRoute(builder: (_) => RoleSelectionPage()));
     }
   }
 
@@ -120,14 +117,13 @@ class _StartingpageState extends State<Startingpage> {
               mainAxisAlignment: MainAxisAlignment.center,
               children: List.generate(
                 data.length,
-                    (index) => AnimatedContainer(
+                (index) => AnimatedContainer(
                   duration: Duration(milliseconds: 300),
                   margin: EdgeInsets.symmetric(horizontal: 4.w),
                   width: currentPage == index ? 25.w : 8.w,
                   height: 8.h,
                   decoration: BoxDecoration(
-                    color:
-                    currentPage == index ? Colors.orange : Colors.grey,
+                    color: currentPage == index ? Colors.orange : Colors.grey,
                     borderRadius: BorderRadius.circular(10.r),
                   ),
                 ),
@@ -135,8 +131,7 @@ class _StartingpageState extends State<Startingpage> {
             ),
             SizedBox(height: 50.h),
             Padding(
-              padding:
-              EdgeInsets.symmetric(horizontal: 24.w, vertical: 16.h),
+              padding: EdgeInsets.symmetric(horizontal: 24.w, vertical: 16.h),
               child: SizedBox(
                 width: 300.w,
                 child: ElevatedButton(
@@ -148,11 +143,8 @@ class _StartingpageState extends State<Startingpage> {
                     ),
                   ),
                   child: Text(
-                    currentPage == data.length - 1
-                        ? "Get Started"
-                        : "Next",
-                    style:
-                    TextStyle(fontSize: 18.sp, color: Colors.white),
+                    currentPage == data.length - 1 ? "Get Started" : "Next",
+                    style: TextStyle(fontSize: 18.sp, color: Colors.white),
                   ),
                 ),
               ),
@@ -163,4 +155,3 @@ class _StartingpageState extends State<Startingpage> {
     );
   }
 }
-

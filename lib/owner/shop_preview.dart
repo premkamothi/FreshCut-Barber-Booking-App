@@ -19,7 +19,7 @@ class _ShopPreviewState extends State<ShopPreview> {
   Map<String, dynamic>? shopData;
   bool isLoading = true;
 
-  // 🔹 Variables to hold extracted shop data
+  // Variables to hold extracted shop data
   String shopName = "";
   String website = "";
   String about = "";
@@ -71,9 +71,9 @@ class _ShopPreviewState extends State<ShopPreview> {
             services = [];
           }
 
-
           primaryContact = data["primaryContactNumber"] ?? "";
-          additionalContacts = List<String>.from(data["additionalContactNumbers"] ?? []);
+          additionalContacts =
+              List<String>.from(data["additionalContactNumbers"] ?? []);
           monFriStart = data["monFriStart"] ?? "";
           monFriEnd = data["monFriEnd"] ?? "";
           satSunStart = data["satSunStart"] ?? "";
@@ -88,7 +88,6 @@ class _ShopPreviewState extends State<ShopPreview> {
       setState(() => isLoading = false);
     }
   }
-
 
   @override
   Widget build(BuildContext context) {
@@ -137,10 +136,10 @@ class _ShopPreviewState extends State<ShopPreview> {
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: List.generate(
                               _shopImages.length,
-                                  (index) => AnimatedContainer(
+                              (index) => AnimatedContainer(
                                 duration: const Duration(milliseconds: 300),
                                 margin:
-                                const EdgeInsets.symmetric(horizontal: 4),
+                                    const EdgeInsets.symmetric(horizontal: 4),
                                 height: 8,
                                 width: _currentPage == index ? 20 : 8,
                                 decoration: BoxDecoration(
@@ -159,7 +158,7 @@ class _ShopPreviewState extends State<ShopPreview> {
 
                   const SizedBox(height: 20),
 
-                  // 🔹 Shop Name
+                  // Shop Name
                   Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 12),
                     child: Text(
@@ -173,7 +172,7 @@ class _ShopPreviewState extends State<ShopPreview> {
 
                   const SizedBox(height: 10),
 
-                  // 🔹 Location
+                  // Location
                   Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 12),
                     child: Row(
@@ -198,7 +197,7 @@ class _ShopPreviewState extends State<ShopPreview> {
 
                   const SizedBox(height: 8),
 
-                  // 🔹 Distance
+                  // Distance
                   Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 12),
                     child: Row(
@@ -209,7 +208,7 @@ class _ShopPreviewState extends State<ShopPreview> {
                         Text(
                           "$distanceKm km away",
                           style:
-                          TextStyle(fontSize: 14, color: Colors.grey[500]),
+                              TextStyle(fontSize: 14, color: Colors.grey[500]),
                         ),
                       ],
                     ),
@@ -217,7 +216,7 @@ class _ShopPreviewState extends State<ShopPreview> {
 
                   const SizedBox(height: 8),
 
-                  // 🔹 Ratings
+                  //Ratings
                   Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 12),
                     child: Row(
@@ -228,7 +227,7 @@ class _ShopPreviewState extends State<ShopPreview> {
                         Text(
                           "$rating",
                           style:
-                          TextStyle(fontSize: 14, color: Colors.grey[500]),
+                              TextStyle(fontSize: 14, color: Colors.grey[500]),
                         ),
                       ],
                     ),
@@ -236,7 +235,7 @@ class _ShopPreviewState extends State<ShopPreview> {
 
                   const SizedBox(height: 14),
 
-                  // 🔹 Services Row
+                  // Services Row
                   Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 12),
                     child: Row(
@@ -244,14 +243,14 @@ class _ShopPreviewState extends State<ShopPreview> {
                       children: [
                         _buildServiceCircle(Icons.language, "Website", () {}),
                         _buildServiceCircle(Icons.design_services, "Services",
-                                () => _showServicesBottomSheet(context)),
+                            () => _showServicesBottomSheet(context)),
                         _buildServiceCircle(Icons.call, "Call",
-                                () => _showContactBottomSheet(context)),
+                            () => _showContactBottomSheet(context)),
                         _buildServiceCircle(Icons.directions, "Direction", () {
                           // Static dummy action
                         }),
                         _buildServiceCircle(Icons.info, "About Us",
-                                () => _showAboutBottomSheet(context)),
+                            () => _showAboutBottomSheet(context)),
                       ],
                     ),
                   ),
@@ -263,7 +262,7 @@ class _ShopPreviewState extends State<ShopPreview> {
 
                   const SizedBox(height: 8),
 
-                  // 🔹 Working Hours
+                  //Working Hours
                   Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 12),
                     child: Column(
@@ -304,15 +303,17 @@ class _ShopPreviewState extends State<ShopPreview> {
                     ),
                   ),
 
-                  // 🔹 Specialists
+                  // Specialists
                   Padding(
-                    padding: const EdgeInsets.only(top: 16, right: 12, left: 12),
+                    padding:
+                        const EdgeInsets.only(top: 16, right: 12, left: 12),
                     child: Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
                         const Text(
                           "Our Specialists",
-                          style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                          style: TextStyle(
+                              fontSize: 18, fontWeight: FontWeight.bold),
                         ),
                       ],
                     ),
@@ -326,10 +327,14 @@ class _ShopPreviewState extends State<ShopPreview> {
                       scrollDirection: Axis.horizontal,
                       padding: const EdgeInsets.symmetric(horizontal: 12),
                       children: [
-                        _buildSpecialistCard("assets/images/image1.jpg", "John Doe", "Sr. Barber"),
-                        _buildSpecialistCard("assets/images/image3.jpg", "Mike Trim", "Sr. Barber"),
-                        _buildSpecialistCard("assets/images/image2.jpg", "Alex Fade", "Jr. Barber"),
-                        _buildSpecialistCard("assets/images/image1.jpg", "Alex Fade", "Jr. Barber"),
+                        _buildSpecialistCard("assets/images/image1.jpg",
+                            "John Doe", "Sr. Barber"),
+                        _buildSpecialistCard("assets/images/image3.jpg",
+                            "Mike Trim", "Sr. Barber"),
+                        _buildSpecialistCard("assets/images/image2.jpg",
+                            "Alex Fade", "Jr. Barber"),
+                        _buildSpecialistCard("assets/images/image1.jpg",
+                            "Alex Fade", "Jr. Barber"),
                       ],
                     ),
                   ),
@@ -343,7 +348,7 @@ class _ShopPreviewState extends State<ShopPreview> {
     );
   }
 
-  // 🔹 Helper Widgets
+  // Helper Widgets
   Widget _buildImageCard(String imageUrl) {
     return ClipRRect(
       borderRadius: BorderRadius.zero,
@@ -363,7 +368,8 @@ class _ShopPreviewState extends State<ShopPreview> {
         children: [
           Container(
             padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(color: lightOrange, shape: BoxShape.circle),
+            decoration:
+                BoxDecoration(color: lightOrange, shape: BoxShape.circle),
             child: Icon(icon, color: orange, size: 28),
           ),
           const SizedBox(height: 6),
@@ -428,7 +434,7 @@ class _ShopPreviewState extends State<ShopPreview> {
     );
   }
 
-  // 🔹 Bottom Sheets
+  //  Bottom Sheets
   void _showAboutBottomSheet(BuildContext context) {
     showModalBottomSheet(
       context: context,
@@ -473,7 +479,8 @@ class _ShopPreviewState extends State<ShopPreview> {
       builder: (context) {
         if (services.isEmpty) {
           return const SizedBox(
-              height: 200, child: Center(child: Text("Services not available")));
+              height: 200,
+              child: Center(child: Text("Services not available")));
         }
         return Padding(
           padding: const EdgeInsets.all(16),
@@ -505,7 +512,8 @@ class _ShopPreviewState extends State<ShopPreview> {
                           borderRadius: BorderRadius.circular(12)),
                       margin: const EdgeInsets.symmetric(vertical: 6),
                       child: ListTile(
-                        leading: const Icon(Icons.design_services, color: Colors.orange),
+                        leading: const Icon(Icons.design_services,
+                            color: Colors.orange),
                         title: Text(
                           name,
                           style: const TextStyle(fontWeight: FontWeight.w600),
@@ -513,14 +521,14 @@ class _ShopPreviewState extends State<ShopPreview> {
                         trailing: Text(
                           "₹$price",
                           style: const TextStyle(
-                              color: Colors.orange, fontWeight: FontWeight.bold),
+                              color: Colors.orange,
+                              fontWeight: FontWeight.bold),
                         ),
                       ),
                     );
                   },
                 ),
               )
-
             ],
           ),
         );
@@ -530,54 +538,53 @@ class _ShopPreviewState extends State<ShopPreview> {
 
   void _showContactBottomSheet(BuildContext context) {
     showModalBottomSheet(
-        context: context,
-        isScrollControlled: true,
-        shape: const RoundedRectangleBorder(
-            borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
-        builder: (context) {
-          if (primaryContact.isEmpty && additionalContacts.isEmpty) {
-            return const SizedBox(
-                height: 200,
-                child: Center(child: Text("Contact numbers not available")));
-          }
-          return Padding(
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Container(
-                  height: 5,
-                  width: 50,
-                  margin: const EdgeInsets.only(bottom: 12),
-                  decoration: BoxDecoration(
-                      color: Colors.grey[400],
-                      borderRadius: BorderRadius.circular(10)),
-                ),
-                const Text("Contact Numbers",
-                    style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
-                const SizedBox(height: 12),
-                Flexible(
-                  child: ListView(
-                    shrinkWrap: true,
-                    children: [
-                      if (primaryContact.isNotEmpty)
-                        ListTile(
+      context: context,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+      builder: (context) {
+        if (primaryContact.isEmpty && additionalContacts.isEmpty) {
+          return const SizedBox(
+              height: 200,
+              child: Center(child: Text("Contact numbers not available")));
+        }
+        return Padding(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                height: 5,
+                width: 50,
+                margin: const EdgeInsets.only(bottom: 12),
+                decoration: BoxDecoration(
+                    color: Colors.grey[400],
+                    borderRadius: BorderRadius.circular(10)),
+              ),
+              const Text("Contact Numbers",
+                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+              const SizedBox(height: 12),
+              Flexible(
+                child: ListView(
+                  shrinkWrap: true,
+                  children: [
+                    if (primaryContact.isNotEmpty)
+                      ListTile(
+                        leading: const Icon(Icons.phone, color: Colors.orange),
+                        title: Text(primaryContact),
+                      ),
+                    ...additionalContacts.map((number) => ListTile(
                           leading:
-                          const Icon(Icons.phone, color: Colors.orange),
-                          title: Text(primaryContact),
-                        ),
-                      ...additionalContacts.map((number) => ListTile(
-                        leading:
-                        const Icon(Icons.phone, color: Colors.orange),
-                        title: Text(number),
-                      )),
-                    ],
-                  ),
+                              const Icon(Icons.phone, color: Colors.orange),
+                          title: Text(number),
+                        )),
+                  ],
                 ),
-              ],
-            ),
-          );
-          },
+              ),
+            ],
+          ),
         );
-    }
+      },
+    );
+  }
 }

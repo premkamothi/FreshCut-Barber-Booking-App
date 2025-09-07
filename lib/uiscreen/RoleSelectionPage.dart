@@ -1,8 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:project_sem7/uiscreen/Loginowner.dart';
-import 'Login.dart';
+import 'package:project_sem7/authentication/Loginowner.dart';
+import '../authentication/Login.dart';
 import 'StartingPage.dart';
-
 
 class RoleSelectionPage extends StatefulWidget {
   const RoleSelectionPage({super.key});
@@ -21,8 +20,8 @@ class _RoleSelectionPageState extends State<RoleSelectionPage>
     super.initState();
 
     _controller =
-    AnimationController(duration: const Duration(seconds: 2), vsync: this)
-      ..repeat(reverse: true);
+        AnimationController(duration: const Duration(seconds: 2), vsync: this)
+          ..repeat(reverse: true);
     _animation = Tween<double>(begin: 0.5, end: 1).animate(_controller);
   }
 
@@ -63,7 +62,7 @@ class _RoleSelectionPageState extends State<RoleSelectionPage>
               onTap: () {
                 Navigator.push(
                   context,
-                  MaterialPageRoute(builder: (context) => const Login()),// replace Notifications() with signup or login page
+                  MaterialPageRoute(builder: (context) => const Login()),
                 );
               },
               child: Stack(
@@ -88,7 +87,8 @@ class _RoleSelectionPageState extends State<RoleSelectionPage>
                       onTap: () {
                         Navigator.pushReplacement(
                           context,
-                          MaterialPageRoute(builder: (context) => const Startingpage()),
+                          MaterialPageRoute(
+                              builder: (context) => const Startingpage()),
                         );
                       },
                       child: Container(
@@ -110,14 +110,13 @@ class _RoleSelectionPageState extends State<RoleSelectionPage>
             ),
           ),
 
-
           // Barber Image (Bottom Half)
           Expanded(
             child: GestureDetector(
               onTap: () {
                 Navigator.push(
                   context,
-                  MaterialPageRoute(builder: (context) => const Loginowner()),// replace Notifications() with signup or login page
+                  MaterialPageRoute(builder: (context) => const Loginowner()),
                 );
               },
               child: Stack(
@@ -129,8 +128,7 @@ class _RoleSelectionPageState extends State<RoleSelectionPage>
                   ),
                   Align(
                     alignment: Alignment.center,
-                    child:
-                    buildOverlayText("Tap here for Shop Owner"),
+                    child: buildOverlayText("Tap here for Shop Owner"),
                   ),
                 ],
               ),

@@ -1,4 +1,3 @@
-// providers/booking_provider.dart
 import 'package:flutter/material.dart';
 import '../models/mearge_barber_model.dart';
 
@@ -41,9 +40,9 @@ class BookingProvider extends ChangeNotifier {
 
   bool get isBookingComplete =>
       _barber != null &&
-          _selectedServices.isNotEmpty &&
-          _selectedDate != null &&
-          _selectedSlot != null;
+      _selectedServices.isNotEmpty &&
+      _selectedDate != null &&
+      _selectedSlot != null;
 
   void clearBooking() {
     _barber = null;
@@ -54,18 +53,16 @@ class BookingProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  /// 🔹 Important: initialize status as `null` (PENDING) so barber sees Accept/Decline
+  ///  Important: initialize status as `null` (PENDING) so barber sees Accept/Decline
   Map<String, dynamic> getBookingData(String userId) {
     return {
       "userId": userId,
-      "placeId": _barber!.placeId,          // make sure this matches your shop doc id (googlePlaceId)
+      "placeId": _barber!.placeId,
       "shopName": _barber!.name,
       "shopAddress": _barber!.address,
       "services": _selectedServices,
       "totalPrice": _totalPrice,
-      "date": _selectedDate!
-          .toIso8601String()
-          .split('T')[0],                   // YYYY-MM-DD
+      "date": _selectedDate!.toIso8601String().split('T')[0],
       "slot": _selectedSlot,
       "createdAt": DateTime.now().toIso8601String(),
     };

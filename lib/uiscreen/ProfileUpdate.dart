@@ -63,7 +63,10 @@ class _ProfileupdateState extends State<Profileupdate> {
     final uid = FirebaseAuth.instance.currentUser?.uid;
     if (uid == null) return;
 
-    final doc = await FirebaseFirestore.instance.collection('ProfileDetail').doc(uid).get();
+    final doc = await FirebaseFirestore.instance
+        .collection('ProfileDetail')
+        .doc(uid)
+        .get();
     if (doc.exists) {
       final data = doc.data();
       if (data != null) {
@@ -97,13 +100,10 @@ class _ProfileupdateState extends State<Profileupdate> {
     final firestore = FirebaseFirestore.instance;
 
     try {
-      // Use batch to update both collections at once
       final batch = firestore.batch();
-
       final profileRef = firestore.collection('ProfileDetail').doc(uid);
 
       batch.update(profileRef, data);
-
       await batch.commit();
 
       // Save locally in SharedPreferences
@@ -111,7 +111,6 @@ class _ProfileupdateState extends State<Profileupdate> {
       await prefs.setString('userName', _nameController.text.trim());
       await prefs.setInt('selectedAvatarIndex', _selectedAvatarIndex);
 
-      // Show success message
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Profile updated successfully!')),
@@ -135,9 +134,11 @@ class _ProfileupdateState extends State<Profileupdate> {
       child: Scaffold(
         backgroundColor: Colors.white,
         appBar: AppBar(
-          leading: IconButton(onPressed: (){
-            Navigator.pop(context);
-          }, icon: Icon(Icons.arrow_back,color: Colors.black)),
+          leading: IconButton(
+              onPressed: () {
+                Navigator.pop(context);
+              },
+              icon: Icon(Icons.arrow_back, color: Colors.black)),
           backgroundColor: Colors.white,
           title: const Text("Profile", style: TextStyle(color: Colors.black)),
           iconTheme: const IconThemeData(color: Colors.black),
@@ -158,7 +159,8 @@ class _ProfileupdateState extends State<Profileupdate> {
                     child: CircleAvatar(
                       backgroundColor: const Color(0xFF6EC6FF),
                       radius: 60.r,
-                      backgroundImage: AssetImage(_avatars[_selectedAvatarIndex]),
+                      backgroundImage:
+                          AssetImage(_avatars[_selectedAvatarIndex]),
                     ),
                   ),
                 ),
@@ -170,7 +172,8 @@ class _ProfileupdateState extends State<Profileupdate> {
                       shrinkWrap: true,
                       physics: const NeverScrollableScrollPhysics(),
                       itemCount: _avatars.length,
-                      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                      gridDelegate:
+                          const SliverGridDelegateWithFixedCrossAxisCount(
                         crossAxisCount: 3,
                         mainAxisSpacing: 20,
                         crossAxisSpacing: 20,
@@ -198,7 +201,8 @@ class _ProfileupdateState extends State<Profileupdate> {
                                   height: 80.r,
                                   decoration: BoxDecoration(
                                     shape: BoxShape.circle,
-                                    border: Border.all(color: Colors.orange, width: 3.w),
+                                    border: Border.all(
+                                        color: Colors.orange, width: 3.w),
                                   ),
                                 ),
                             ],
@@ -210,7 +214,9 @@ class _ProfileupdateState extends State<Profileupdate> {
                 SizedBox(height: 30.h),
                 _buildTextField(_nameController, "Enter Name", Icons.person),
                 SizedBox(height: 10.h),
-                _buildTextField(_mobilenoController, "Enter Mobile No", Icons.phone, isPhone: true),
+                _buildTextField(
+                    _mobilenoController, "Enter Mobile No", Icons.phone,
+                    isPhone: true),
                 SizedBox(height: 10.h),
                 _buildDisabledEmailField(),
                 SizedBox(height: 40.h),
@@ -227,24 +233,41 @@ class _ProfileupdateState extends State<Profileupdate> {
                     ),
                     child: Text(
                       "Update",
-                      style: TextStyle(color: Colors.white, fontSize: 15.sp, fontWeight: FontWeight.bold),
+                      style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 15.sp,
+                          fontWeight: FontWeight.bold),
                     ),
                   ),
                 ),
                 SizedBox(height: 20.h),
-                SizedBox(height: 40.h, width: 320.w,
-                child: ElevatedButton(onPressed: () async {
-                  final prefs = await SharedPreferences.getInstance();
-                  await prefs.setBool('is_logged_in', false);
-                  await prefs.setString('user_type', 'customer');
-                  Navigator.push(context, MaterialPageRoute(builder: (context) => Startingpage()));
-                },style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.orange,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(15.r),
-                  ),
-                ),
-                    child: Text("Sign Out", style: TextStyle(color: Colors.white, fontSize: 15.sp, fontWeight: FontWeight.bold),)),)
+                SizedBox(
+                  height: 40.h,
+                  width: 320.w,
+                  child: ElevatedButton(
+                      onPressed: () async {
+                        final prefs = await SharedPreferences.getInstance();
+                        await prefs.setBool('is_logged_in', false);
+                        await prefs.setString('user_type', 'customer');
+                        Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                                builder: (context) => Startingpage()));
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.orange,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(15.r),
+                        ),
+                      ),
+                      child: Text(
+                        "Sign Out",
+                        style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 15.sp,
+                            fontWeight: FontWeight.bold),
+                      )),
+                )
               ],
             ),
           ),
@@ -253,7 +276,9 @@ class _ProfileupdateState extends State<Profileupdate> {
     );
   }
 
-  Widget _buildTextField(TextEditingController controller, String hint, IconData icon, {bool isPhone = false}) {
+  Widget _buildTextField(
+      TextEditingController controller, String hint, IconData icon,
+      {bool isPhone = false}) {
     return SizedBox(
       height: 50.h,
       width: 320.w,
@@ -262,7 +287,9 @@ class _ProfileupdateState extends State<Profileupdate> {
         keyboardType: isPhone ? TextInputType.phone : TextInputType.text,
         validator: (value) {
           if (value == null || value.trim().isEmpty) {
-            return isPhone ? "Please enter your mobile number" : "Please enter your name";
+            return isPhone
+                ? "Please enter your mobile number"
+                : "Please enter your name";
           }
           if (isPhone && !RegExp(r'^\d{10}$').hasMatch(value.trim())) {
             return "Mobile number must be 10 digits";
@@ -299,14 +326,16 @@ class _ProfileupdateState extends State<Profileupdate> {
         style: TextStyle(fontSize: 15.sp, color: Colors.black),
         decoration: InputDecoration(
           prefixIcon: const Icon(Icons.email, color: Colors.black),
-          border: OutlineInputBorder(borderRadius: BorderRadius.all(Radius.circular(9.r))),
+          border: OutlineInputBorder(
+              borderRadius: BorderRadius.all(Radius.circular(9.r))),
           disabledBorder: OutlineInputBorder(
             borderRadius: BorderRadius.all(Radius.circular(9.r)),
             borderSide: const BorderSide(color: Colors.grey),
           ),
           filled: true,
           fillColor: Colors.white,
-          contentPadding: EdgeInsets.symmetric(vertical: 15.h, horizontal: 10.w),
+          contentPadding:
+              EdgeInsets.symmetric(vertical: 15.h, horizontal: 10.w),
         ),
       ),
     );

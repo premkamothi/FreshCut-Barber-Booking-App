@@ -1,5 +1,4 @@
 import 'package:project_sem7/models/shop_profile_model.dart';
-
 import 'barber_model.dart';
 
 class MergedBarber {
@@ -25,31 +24,30 @@ class MergedBarber {
   final String? primaryContactNumber;
   final List<Map<String, dynamic>>? services;
   final List<String>? additionalContactNumbers;
-  final String? ownerUid;// ✅ change here
+  final String? ownerUid;
 
-  MergedBarber({
-    required this.placeId,
-    required this.name,
-    required this.address,
-    required this.imageUrl,
-    required this.shopPhotos,
-    required this.distanceKm,
-    required this.rating,
-    required this.lat,
-    required this.lng,
-    required this.openNow,
-    this.about,
-    this.website,
-    this.phone,
-    this.monFriStart,
-    this.monFriEnd,
-    this.satSunStart,
-    this.satSunEnd,
-    this.services,
-    this.primaryContactNumber,
-    this.additionalContactNumbers,
-    this.ownerUid
-  });
+  MergedBarber(
+      {required this.placeId,
+      required this.name,
+      required this.address,
+      required this.imageUrl,
+      required this.shopPhotos,
+      required this.distanceKm,
+      required this.rating,
+      required this.lat,
+      required this.lng,
+      required this.openNow,
+      this.about,
+      this.website,
+      this.phone,
+      this.monFriStart,
+      this.monFriEnd,
+      this.satSunStart,
+      this.satSunEnd,
+      this.services,
+      this.primaryContactNumber,
+      this.additionalContactNumbers,
+      this.ownerUid});
 
   /// Merge Google + Firebase
   factory MergedBarber.from(BarberModel api, ShopProfileDetails? fb) {
@@ -74,7 +72,7 @@ class MergedBarber {
       satSunEnd: fb?.satSunEnd,
       services: fb?.services,
       primaryContactNumber: fb?.primaryContactNumber,
-      additionalContactNumbers: fb?.additionalContactNumbers, // ✅ now List<String>
+      additionalContactNumbers: fb?.additionalContactNumbers,
     );
   }
 }
