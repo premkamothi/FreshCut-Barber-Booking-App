@@ -6,6 +6,7 @@ import 'package:geolocator/geolocator.dart';
 import 'package:http/http.dart' as http;
 import 'package:url_launcher/url_launcher.dart';
 import '../booking/book_now_page.dart';
+import '../key/api_key.dart';
 import '../models/barber_model.dart';
 import '../models/mearge_barber_model.dart';
 import '../models/shop_profile_model.dart';
@@ -620,12 +621,11 @@ class _ShopProfileState extends State<ShopProfile> {
 }
 
 class GooglePlacesService {
-  final String apiKey = "AIzaSyA5xVaMFV6c5rM4BCq1uVzUmXD_MxGwEZY";
 
   /// Fetch place details by placeId
   Future<BarberModel?> getPlaceDetails(String placeId) async {
     final url = Uri.parse(
-      "https://maps.googleapis.com/maps/api/place/details/json?place_id=$placeId&fields=name,formatted_address,geometry,rating,opening_hours,photos&key=$apiKey",
+      "https://maps.googleapis.com/maps/api/place/details/json?place_id=$placeId&fields=name,formatted_address,geometry,rating,opening_hours,photos&key=${Apikey.key}",
     );
 
     final response = await http.get(url);
@@ -645,7 +645,7 @@ class GooglePlacesService {
           lng: result["geometry"]["location"]["lng"],
           openNow: result["opening_hours"]?["open_now"] ?? false,
           imageUrl: result["photos"] != null && result["photos"].isNotEmpty
-              ? "https://maps.googleapis.com/maps/api/place/photo?maxwidth=400&photoreference=${result["photos"][0]["photo_reference"]}&key=$apiKey"
+              ? "https://maps.googleapis.com/maps/api/place/photo?maxwidth=400&photoreference=${result["photos"][0]["photo_reference"]}&key=${Apikey.key}"
               : "",
           distanceKm: 0.0, // You can calculate separately if needed
         );

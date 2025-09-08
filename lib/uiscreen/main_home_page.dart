@@ -4,6 +4,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart' hide Notification;
 import 'package:http/http.dart' as http;
 import 'package:project_sem7/uiscreen/ProfileUpdate.dart';
+import '../key/api_key.dart';
 import '../models/barber_model.dart';
 import '../widgets/custom_search_bar.dart';
 import '../widgets/barber_card_list.dart';
@@ -20,7 +21,6 @@ class MainHomePage extends StatefulWidget {
 }
 
 class GooglePlacesService {
-  final String _apiKey = 'AIzaSyA5xVaMFV6c5rM4BCq1uVzUmXD_MxGwEZY';
 
   Future<List<BarberModel>> getNearbyBarbers(
       double userLat, double userLng) async {
@@ -30,7 +30,8 @@ class GooglePlacesService {
             '&radius=5000'
             '&type=hair_care'
             '&keyword=barber'
-            '&key=$_apiKey');
+            '&key=${Apikey.key}',
+        );
 
     final response = await http.get(url);
     final data = jsonDecode(response.body);
@@ -49,7 +50,7 @@ class GooglePlacesService {
           name: place['name'],
           address: place['vicinity'] ?? '',
           imageUrl: place['photos'] != null
-              ? 'https://maps.googleapis.com/maps/api/place/photo?maxwidth=400&photo_reference=${place['photos'][0]['photo_reference']}&key=$_apiKey'
+              ? 'https://maps.googleapis.com/maps/api/place/photo?maxwidth=400&photo_reference=${place['photos'][0]['photo_reference']}&key=${Apikey.key}'
               : 'https://maps.gstatic.com/mapfiles/place_api/icons/v1/png_71/generic_business-71.png',
           distanceKm: distanceKm,
           rating: (place['rating'] ?? 0).toDouble(),
@@ -107,9 +108,9 @@ Future<Position> _getCurrentPosition() async {
 }
 
 Future<String> getCityFromCoordinates(double lat, double lng) async {
-  const apiKey = 'AIzaSyA5xVaMFV6c5rM4BCq1uVzUmXD_MxGwEZY';
+
   final url = Uri.parse(
-    'https://maps.googleapis.com/maps/api/geocode/json?latlng=$lat,$lng&key=$apiKey',
+    'https://maps.googleapis.com/maps/api/geocode/json?latlng=$lat,$lng&key=${Apikey.key}',
   );
 
   final response = await http.get(url);

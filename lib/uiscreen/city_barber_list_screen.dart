@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
+import '../key/api_key.dart';
 import '../models/barber_model.dart';
 import '../widgets/custom_search_bar.dart';
 
@@ -24,9 +25,9 @@ class _CityBarberListScreenState extends State<CityBarberListScreen> {
   }
 
   Future<void> fetchBarbersByCity(String city) async {
-    const apiKey = 'AIzaSyA5xVaMFV6c5rM4BCq1uVzUmXD_MxGwEZY';
+
     final url = Uri.parse(
-      'https://maps.googleapis.com/maps/api/place/textsearch/json?query=barber+in+$city&key=$apiKey',
+      'https://maps.googleapis.com/maps/api/place/textsearch/json?query=barber+in+$city&key=${Apikey.key}',
     );
 
     final response = await http.get(url);
@@ -39,7 +40,7 @@ class _CityBarberListScreenState extends State<CityBarberListScreen> {
           placeId: place['placeId'],
           address: place['formatted_address'] ?? '',
           imageUrl: place['photos'] != null
-              ? 'https://maps.googleapis.com/maps/api/place/photo?maxwidth=400&photo_reference=${place['photos'][0]['photo_reference']}&key=$apiKey'
+              ? 'https://maps.googleapis.com/maps/api/place/photo?maxwidth=400&photo_reference=${place['photos'][0]['photo_reference']}&key=${Apikey.key}'
               : 'https://maps.gstatic.com/mapfiles/place_api/icons/v1/png_71/generic_business-71.png',
           distanceKm: 0.0,
           rating: (place['rating'] ?? 0).toDouble(),

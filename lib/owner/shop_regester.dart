@@ -4,6 +4,8 @@ import 'package:http/http.dart' as http;
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
+import '../key/api_key.dart';
+
 class ShopRegister extends StatefulWidget {
   const ShopRegister({Key? key}) : super(key: key);
 
@@ -23,7 +25,6 @@ class _ShopRegisterState extends State<ShopRegister> {
   bool _isLoading = true;
   String? _selectedPlaceId;
 
-  final String _googleApiKey = "AIzaSyA5xVaMFV6c5rM4BCq1uVzUmXD_MxGwEZY";
 
   @override
   void initState() {
@@ -75,7 +76,7 @@ class _ShopRegisterState extends State<ShopRegister> {
 
     final encodedQuery = Uri.encodeComponent("$query barber");
     final url =
-        "https://maps.googleapis.com/maps/api/place/textsearch/json?query=$encodedQuery&key=$_googleApiKey";
+        "https://maps.googleapis.com/maps/api/place/textsearch/json?query=$encodedQuery&key=${Apikey.key}";
 
     final response = await http.get(Uri.parse(url));
 

@@ -5,6 +5,8 @@ import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:http/http.dart' as http;
 
+import '../key/api_key.dart';
+
 class LocationAndBarberShop extends StatefulWidget {
   const LocationAndBarberShop({super.key});
 
@@ -17,7 +19,6 @@ class _LocationAndBarberShopState extends State<LocationAndBarberShop> {
   Position? _currentPosition;
   Set<Marker> _markers = {};
   String _selectedShopName = '';
-  final String apiKey = 'AIzaSyA5xVaMFV6c5rM4BCq1uVzUmXD_MxGwEZY';
 
   @override
   void initState() {
@@ -74,7 +75,7 @@ class _LocationAndBarberShopState extends State<LocationAndBarberShop> {
           '&radius=5000' // Use larger radius
           '&type=hair_care'
           '&keyword=barber'
-          '&key=$apiKey';
+          '&key=${Apikey.key}';
 
       final response = await http.get(Uri.parse(apiUrl));
       print('Nearby search response: ${response.body}');
