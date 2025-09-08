@@ -11,7 +11,7 @@ import '../widgets/barber_card_list.dart';
 import 'package:geolocator/geolocator.dart';
 import 'city_barber_list_screen.dart';
 import 'notification.dart';
-import '../authentication/Login.dart'; //
+import '../authentication/Login.dart';
 
 class MainHomePage extends StatefulWidget {
   const MainHomePage({super.key});

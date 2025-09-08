@@ -60,6 +60,57 @@ and navigation support.
 
 ---
 
+## 🚀 Installation & Setup
+
+### 1. Prerequisites
+- An IDE like **Android Studio** or **VS Code**
+- [Flutter SDK](https://docs.flutter.dev/get-started/install) (latest stable)
+- [Dart](https://dart.dev/get-dart) (comes with Flutter)
+- [Firebase CLI](https://firebase.google.com/docs/cli)
+
+
+
+### 2. Clone the Project
+```bash
+git clone https://github.com/premkamothi/FreshCut-Barber-Booking-App.git
+cd FreshCut-Barber-Booking-App
+```
+### 3. Get your API key
+
+1. Go to [Google Cloud Console](https://console.cloud.google.com/).
+2. Log in with your Google account.
+3. Create a new project (or select an existing one).
+    - Click on **Project Selector** (top-left dropdown).
+    - Click **New Project**, give it a name (e.g., `FreshCut-Barber-Booking-App`), and click **Create**.
+4. Enable required APIs:
+    - In the left sidebar, go to **APIs & Services > Library**.
+    - Search for and enable the following:
+        - **Places API**
+        - **Maps SDK for Android**
+5. Create API credentials:
+    - Go to **APIs & Services > Credentials**.
+    - Click **+ CREATE CREDENTIALS** → **API Key**.
+    - Copy the generated API key.
+6. Secure the API key (highly recommended):
+    - Under your new key, click **Restrict Key**.
+    - In **Application restrictions**, choose:
+        - **Android apps** (add your SHA-1 + package name)
+        - or **HTTP referrers** (if using web).
+    - In **API restrictions**, select:
+        - **Places API**
+        - **Maps SDK for Android**
+    - Save your changes.
+7. Add the API key to your Flutter app:
+    - Go to **api_key.dart** and copy you key there.
+
+### 4. Run in your Phone
+- Go to phone setting and start Developer mode.
+- Connect phone with laptop (Allow USB debugging).
+  ```bash
+  flutter pub get
+  flutter run
+  ```
+---
 ## 📚 References
 1. [Google Firebase Documentation](https://firebase.google.com/docs)
 2. [Google Maps Platform Documentation](https://developers.google.com/maps)
