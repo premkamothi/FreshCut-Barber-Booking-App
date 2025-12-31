@@ -25,7 +25,6 @@ class _CityBarberListScreenState extends State<CityBarberListScreen> {
   }
 
   Future<void> fetchBarbersByCity(String city) async {
-
     final url = Uri.parse(
       'https://maps.googleapis.com/maps/api/place/textsearch/json?query=barber+in+$city&key=${Apikey.key}',
     );
@@ -36,8 +35,8 @@ class _CityBarberListScreenState extends State<CityBarberListScreen> {
     if (response.statusCode == 200 && data['status'] == 'OK') {
       List<BarberModel> barbers = (data['results'] as List).map((place) {
         return BarberModel(
-          name: place['name'],
-          placeId: place['placeId'],
+          name: place['name'] ?? 'Unknown Barber',
+          placeId: place['place_id'] ?? '',
           address: place['formatted_address'] ?? '',
           imageUrl: place['photos'] != null
               ? 'https://maps.googleapis.com/maps/api/place/photo?maxwidth=400&photo_reference=${place['photos'][0]['photo_reference']}&key=${Apikey.key}'
@@ -47,10 +46,12 @@ class _CityBarberListScreenState extends State<CityBarberListScreen> {
           lat: place['geometry']['location']['lat'],
           lng: place['geometry']['location']['lng'],
           openNow: place['opening_hours'] != null
-              ? place['opening_hours']['open_now']
+              ? place['opening_hours']['open_now'] ?? false
               : false,
         );
       }).toList();
+
+
 
       barbers.sort((a, b) => b.rating.compareTo(a.rating));
 
@@ -99,114 +100,107 @@ class _CityBarberListScreenState extends State<CityBarberListScreen> {
             ),
           ),
           Expanded(
-            child: _filteredBarbers.isEmpty
-                ? const Center(child: Text("No barbers found."))
-                : ListView.builder(
-                    padding: const EdgeInsets.all(12),
-                    itemCount: _filteredBarbers.length,
-                    itemBuilder: (context, index) {
-                      final barber = _filteredBarbers[index];
-                      return SizedBox(
-                        height: 120,
-                        child: Card(
-                          color: Colors.white,
-                          elevation: 4,
-                          margin: const EdgeInsets.only(
-                              right: 4, left: 4, bottom: 8),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(16),
+            child: ListView.builder(
+              padding: const EdgeInsets.all(12),
+              itemCount: _filteredBarbers.length,
+              itemBuilder: (context, index) {
+                final barber = _filteredBarbers[index];
+                return SizedBox(
+                  height: 120,
+                  child: Card(
+                    color: Colors.white,
+                    margin: const EdgeInsets.only(right: 4, left: 6, bottom: 8),
+                    elevation: 1,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                    child: Padding(
+                      padding: const EdgeInsets.all(8),
+                      child: Row(
+                        children: [
+                          ClipRRect(
+                            borderRadius: BorderRadius.circular(12),
+                            child: Image.network(
+                              barber.imageUrl,
+                              width: 70,
+                              height: 90,
+                              fit: BoxFit.cover,
+                              errorBuilder: (context, error, stackTrace) {
+                                return Container(
+                                  width: 70,
+                                  height: 90,
+                                  color: Colors.grey[300],
+                                  child: const Icon(
+                                    Icons.image_not_supported,
+                                    size: 40,
+                                    color: Colors.grey,
+                                  ),
+                                );
+                              },
+                            ),
                           ),
-                          child: Padding(
-                            padding: const EdgeInsets.all(8),
-                            child: Row(
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              mainAxisAlignment: MainAxisAlignment.center,
                               children: [
-                                ClipRRect(
-                                  borderRadius: BorderRadius.circular(12),
-                                  child: Image.network(
-                                    barber.imageUrl,
-                                    width: 70,
-                                    height: 90,
-                                    fit: BoxFit.cover,
-                                    errorBuilder: (context, error, stackTrace) {
-                                      return Container(
-                                        width: 70,
-                                        height: 90,
-                                        color: Colors.grey[300],
-                                        child: const Icon(
-                                          Icons.image_not_supported,
-                                          size: 40,
-                                          color: Colors.grey,
-                                        ),
-                                      );
-                                    },
-                                  ),
+                                Text(
+                                  barber.name,
+                                  style: const TextStyle(
+                                      fontSize: 18,
+                                      fontWeight: FontWeight.bold),
+                                  overflow: TextOverflow.ellipsis,
                                 ),
-                                const SizedBox(width: 12),
-                                Expanded(
-                                  child: Column(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.start,
-                                    mainAxisAlignment: MainAxisAlignment.center,
-                                    children: [
-                                      Text(
-                                        barber.name,
-                                        style: const TextStyle(
-                                            fontSize: 18,
-                                            fontWeight: FontWeight.bold),
-                                        overflow: TextOverflow.ellipsis,
+                                const SizedBox(height: 4),
+                                Text(
+                                  barber.address,
+                                  style: const TextStyle(
+                                      fontSize: 14, color: Colors.grey),
+                                  overflow: TextOverflow.ellipsis,
+                                  maxLines: 1,
+                                ),
+                                const SizedBox(height: 6),
+                                Row(
+                                  children: [
+                                    const Icon(Icons.star,
+                                        size: 18, color: Colors.orange),
+                                    const SizedBox(width: 4),
+                                    Text(
+                                      barber.rating.toString(),
+                                      style: const TextStyle(fontSize: 14),
+                                    ),
+                                    const SizedBox(width: 10,),
+                                    Icon(
+                                      Icons.circle,
+                                      size: 10,
+                                      color: barber.openNow
+                                          ? Colors.green
+                                          : Colors.red,
+                                    ),
+                                    const SizedBox(width: 6),
+                                    Text(
+                                      barber.openNow ? 'Open Now' : 'Closed',
+                                      style: TextStyle(
+                                        fontSize: 14,
+                                        color: barber.openNow
+                                            ? Colors.green
+                                            : Colors.red,
+                                        fontWeight: FontWeight.w500,
                                       ),
-                                      const SizedBox(height: 4),
-                                      Text(
-                                        barber.address,
-                                        style: const TextStyle(
-                                            fontSize: 14, color: Colors.grey),
-                                        overflow: TextOverflow.ellipsis,
-                                        maxLines: 1,
-                                      ),
-                                      const SizedBox(height: 6),
-                                      Row(
-                                        children: [
-                                          const Icon(Icons.star,
-                                              size: 18, color: Colors.orange),
-                                          const SizedBox(width: 4),
-                                          Text(
-                                            barber.rating.toString(),
-                                            style:
-                                                const TextStyle(fontSize: 14),
-                                          ),
-                                          const Spacer(),
-                                          Icon(
-                                            Icons.circle,
-                                            size: 10,
-                                            color: barber.openNow
-                                                ? Colors.green
-                                                : Colors.red,
-                                          ),
-                                          const SizedBox(width: 6),
-                                          Text(
-                                            barber.openNow
-                                                ? 'Open Now'
-                                                : 'Closed',
-                                            style: TextStyle(
-                                              fontSize: 14,
-                                              color: barber.openNow
-                                                  ? Colors.green
-                                                  : Colors.red,
-                                              fontWeight: FontWeight.w500,
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-                                    ],
-                                  ),
+                                    ),
+                                  ],
                                 ),
                               ],
                             ),
                           ),
-                        ),
-                      );
-                    },
+                        ],
+                      ),
+                    ),
                   ),
+                );
+              },
+            ),
           ),
         ],
       ),

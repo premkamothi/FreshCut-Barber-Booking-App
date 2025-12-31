@@ -102,7 +102,7 @@ class _LocationAndBarberShopState extends State<LocationAndBarberShop> {
 
           setState(() {
             _markers = newMarkers;
-            _selectedShopName = 'Nearby barber shops loaded.';
+
           });
         } else {
           setState(() {

@@ -2,13 +2,13 @@ import 'dart:convert';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart' hide Notification;
+import 'package:geolocator/geolocator.dart';
 import 'package:http/http.dart' as http;
 import 'package:project_sem7/uiscreen/ProfileUpdate.dart';
 import '../key/api_key.dart';
 import '../models/barber_model.dart';
 import '../widgets/custom_search_bar.dart';
 import '../widgets/barber_card_list.dart';
-import 'package:geolocator/geolocator.dart';
 import 'city_barber_list_screen.dart';
 import 'notification.dart';
 import '../authentication/Login.dart';
@@ -133,7 +133,29 @@ Future<String> getCityFromCoordinates(double lat, double lng) async {
   }
 }
 
+
+
 class _MainHomePageState extends State<MainHomePage> {
+
+  Map<String, List<QueryDocumentSnapshot>> groupedOffers = {};
+
+
+
+
+  void _filterBarbers(String query) {
+    setState(() {
+      if (query.isEmpty) {
+        _filteredBarbers = _allBarbers;
+      } else {
+        _filteredBarbers = _allBarbers
+            .where((barber) =>
+            barber.name.toLowerCase().contains(query.toLowerCase()))
+            .toList();
+      }
+    });
+  }
+
+
   late Future<List<BarberModel>> _barberFuture;
   final List<String> _services = [
     "All",
@@ -143,6 +165,16 @@ class _MainHomePageState extends State<MainHomePage> {
     "Hair Spa"
   ];
   String _selectedService = "All";
+  final TextEditingController _searchController = TextEditingController();
+
+  List<BarberModel> _allBarbers = [];
+  List<BarberModel> _filteredBarbers = [];
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
 
   @override
   void initState() {
@@ -303,6 +335,7 @@ class _MainHomePageState extends State<MainHomePage> {
           ],
         ),
       ),
+
       body: FutureBuilder<List<BarberModel>>(
         future: _barberFuture,
         builder: (context, snapshot) {
@@ -314,6 +347,10 @@ class _MainHomePageState extends State<MainHomePage> {
             return const Center(child: Text('No barbers found nearby.'));
           } else {
             final barbers = snapshot.data!;
+            if (_allBarbers.isEmpty) {
+              _allBarbers = barbers;
+              _filteredBarbers = barbers;
+            }
             return ListView(
               physics: const BouncingScrollPhysics(),
               padding: const EdgeInsets.only(bottom: 20),
@@ -322,15 +359,22 @@ class _MainHomePageState extends State<MainHomePage> {
                   padding:
                       const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                   child: CustomSearchBar(
-                    controller: TextEditingController(),
-                    onChanged: (value) {},
+                    controller: _searchController,
+                    onChanged: _filterBarbers,
                   ),
+
                 ),
+
+                const SizedBox(height: 10,),
+
+
                 Padding(
                   padding:
                       const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
                   child: Row(
                     children: [
+
+
                       const Text(
                         "Nearby Your Barber",
                         style: TextStyle(
@@ -373,18 +417,18 @@ class _MainHomePageState extends State<MainHomePage> {
                     ],
                   ),
                 ),
-                SizedBox(
-                  child: SingleChildScrollView(
-                    scrollDirection: Axis.horizontal,
-                    padding: const EdgeInsets.symmetric(horizontal: 6),
-                    child: Row(
-                      children: _services
-                          .map((service) => _buildServiceButton(service))
-                          .toList(),
-                    ),
-                  ),
-                ),
-                BarberCardList(barbers: barbers),
+                // SizedBox(
+                //   child: SingleChildScrollView(
+                //     scrollDirection: Axis.horizontal,
+                //     padding: const EdgeInsets.symmetric(horizontal: 6),
+                //     child: Row(
+                //       children: _services
+                //           .map((service) => _buildServiceButton(service))
+                //           .toList(),
+                //     ),
+                //   ),
+                // ),
+                BarberCardList(barbers: _filteredBarbers),
                 const SizedBox(height: 20),
               ],
             );

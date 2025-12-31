@@ -44,9 +44,9 @@ class MyApp extends StatelessWidget {
       minTextAdapt: true,
       splitScreenMode: true,
       builder: (context, child) {
-        return MultiProvider( // Changed from ChangeNotifierProvider to MultiProvider
+        return MultiProvider(
           providers: [
-            ChangeNotifierProvider(create: (_) => LikedShopsProvider()), // Your existing provider
+            ChangeNotifierProvider(create: (_) => LikedShopsProvider()), //
             ChangeNotifierProvider(create: (_) => BookingProvider()),
           ],
           child: MaterialApp(

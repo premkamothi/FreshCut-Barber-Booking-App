@@ -240,16 +240,6 @@ class _SettingsState extends State<Settings> {
                   color: Colors.white,
                 ),
                 // Dark Mode Toggle
-                SwitchListTile(
-                  secondary: const Icon(Icons.dark_mode, color: Colors.orange),
-                  title: const Text("Dark Mode"),
-                  value: isDarkMode,
-                  onChanged: (val) {
-                    setState(() {
-                      isDarkMode = val;
-                    });
-                  },
-                ),
                 ListTile(
                   leading: const Icon(Icons.logout, color: Colors.red),
                   title: const Text(
